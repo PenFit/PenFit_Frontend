@@ -7,7 +7,7 @@ export default function Splash() {
   const navigate = useNavigate();
 
   return (
-    <main className="flex min-h-screen flex-col bg-[oklch(var(--background-50))]">
+    <main className="flex h-full min-h-0 flex-col bg-[oklch(var(--background-50))]">
       {/* 앱 로고, 서비스명, 소개 문구를 중앙에 배치하는 메인 콘텐츠 영역 */}
       <section className="flex flex-1 flex-col items-center justify-center px-6 pb-20">
         <img

@@ -21,7 +21,7 @@ export default function Login() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col bg-[oklch(var(--background-50))]">
+    <main className="relative flex h-full min-h-0 flex-col overflow-y-auto bg-[oklch(var(--background-50))]">
       {/* 페이지 상단 로고와 안내 문구 영역 */}
       <section className="px-6 pt-20">
         <img src={icon} alt="PenFit" className="mb-7 h-12 w-12 rounded-xl" />
