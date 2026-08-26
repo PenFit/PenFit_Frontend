@@ -11,6 +11,7 @@ import AccountCompare from "../pages/simul_ready/account_select/compare/AccountC
 import AmountInput from "../pages/simul_ready/amount_input/AmountInput";
 import ResultPreview from "../pages/simul_ready/result_preview/ResultPreview";
 import Simulation from "../pages/simulation/SImulation";
+import Loading from "../pages/simulation/loading/Loading";
 
 // 앱에서 사용할 URL 경로와 각 경로에 보여줄 페이지 컴포넌트를 정의
 const routes: RouteObject[] = [
@@ -27,6 +28,7 @@ const routes: RouteObject[] = [
       { path: "/amount-input", element: <AmountInput />},
       { path: "/result-preview", element: <ResultPreview />},
       { path: "/simulation/:step", element: <Simulation />},
+      { path: "/loading", element: <Loading />},
     ],
   },
   {
