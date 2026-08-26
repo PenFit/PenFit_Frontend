@@ -7,6 +7,7 @@ interface RecommendProductCardProps {
     summary: string;
     highlight: string;
     shortName: string;
+    productType: string;
     etfCount?: number;
     fundCount?: number;
     feeMin?: number;
@@ -37,7 +38,7 @@ export default function RecommendProductCard({
               {rank}위
             </span>
             <span className="text-xs font-medium text-foreground-500">
-              연금저축펀드
+              {product.productType}
             </span>
           </div>
           <i className="ri-arrow-right-line flex h-5 w-5 shrink-0 items-center justify-center text-foreground-400" />
@@ -85,7 +86,7 @@ export default function RecommendProductCard({
         <span className="bg-foreground-950 text-background-50 text-xs font-bold px-2 py-0.5 rounded">
           {rank}위
         </span>
-        <span className="text-xs text-foreground-500">연금저축펀드</span>
+        <span className="text-xs text-foreground-500">{product.productType}</span>
       </div>
 
       <h3 className="text-lg font-bold text-foreground-950">
