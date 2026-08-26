@@ -1,5 +1,6 @@
 import type { RouteObject } from "react-router-dom";
 import AppLayout from "../layout/AppLayout";
+import NotFound from "../pages/NotFound";
 import Login from "../pages/login/Login";
 import Splash from "../pages/splash/Splash";
 import Step1 from "../pages/basic_info/Step1";
@@ -26,6 +27,9 @@ const routes: RouteObject[] = [
       { path: "/result-preview", element: <ResultPreview />},
     ],
   },
+  {
+    path: "*", element: <NotFound />,
+  }
 ];
 
 export default routes;
