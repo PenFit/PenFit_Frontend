@@ -13,6 +13,10 @@ import ResultPreview from "../pages/simul_ready/result_preview/ResultPreview";
 import Simulation from "../pages/simulation/SImulation";
 import Loading from "../pages/simulation/loading/Loading";
 import Home from "../pages/home/Home";
+import RecommendMain from "../pages/recommend/Recommend";
+import RecommendStart from "../pages/recommend/start/RecommendStart";
+import RecommendDetail from "../pages/recommend/detail/RecommendDetail";
+import RecommendCompare from "../pages/recommend/compare/RecommendCompare";
 
 // 앱에서 사용할 URL 경로와 각 경로에 보여줄 페이지 컴포넌트를 정의
 const routes: RouteObject[] = [
@@ -31,6 +35,10 @@ const routes: RouteObject[] = [
       { path: "/simulation/:step", element: <Simulation />},
       { path: "/loading", element: <Loading />},
       { path: "/home", element: <Home />},
+      { path: "/recommend", element: <RecommendMain />},
+      { path: "/recommend/start", element: <RecommendStart />},
+      { path: "/recommend/detail", element: <RecommendDetail />},
+      { path: "/recommend/compare", element: <RecommendCompare />},
     ],
   },
   {
