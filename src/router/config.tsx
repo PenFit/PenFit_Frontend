@@ -21,6 +21,8 @@ import Mission from "../pages/mission/Mission";
 import MissionAnalysis from "../pages/mission/analysis/MissionAnalysis";
 import MissionWeekly from "../pages/mission/weekly/MissionWeekly";
 import MissionComplete from "../pages/mission/complete/MissionComplete";
+import Passport from "../pages/passport/Passport";
+import PlanResult from "../pages/plan_result/PlanResult";
 
 // 앱에서 사용할 URL 경로와 각 경로에 보여줄 페이지 컴포넌트를 정의
 const routes: RouteObject[] = [
@@ -47,6 +49,8 @@ const routes: RouteObject[] = [
       { path: "/mission/analysis", element: <MissionAnalysis />},
       { path: "/mission/weekly", element: <MissionWeekly />},
       { path: "/mission/complete", element: <MissionComplete />},
+      { path: "/passport", element: <Passport />},
+      { path: "/plan-result", element: <PlanResult />},
     ],
   },
   {

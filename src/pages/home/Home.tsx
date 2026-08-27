@@ -96,8 +96,9 @@ export default function Home() {
               <button
                 type="button"
                 className="flex items-center gap-1 text-sm font-medium text-primary-500 hover:text-primary-600 transition-colors cursor-pointer"
+                onClick={() => navigate('/plan-result')}
               >
-                계획 수정하기
+                계획 확인하기
                 <i className="ri-arrow-right-line w-4 h-4 flex items-center justify-center" />
               </button>
             </div>
