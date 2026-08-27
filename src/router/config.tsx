@@ -25,6 +25,9 @@ import Passport from "../pages/passport/Passport";
 import PlanResult from "../pages/plan_result/PlanResult";
 import MyPage from "../pages/mypage/MyPage";
 import MyInfo from "../pages/mypage/my_info/MyInfo";
+import StatusSuccess from "../pages/status/Success";
+import StatusError from "../pages/status/Error";
+import StatusEmpty from "../pages/status/Empty";
 
 // 앱에서 사용할 URL 경로와 각 경로에 보여줄 페이지 컴포넌트를 정의
 const routes: RouteObject[] = [
@@ -55,6 +58,9 @@ const routes: RouteObject[] = [
       { path: "/plan-result", element: <PlanResult />},
       { path: "/mypage", element: <MyPage />},
       { path: "/mypage/info", element: <MyInfo />},
+      { path: "/status/success", element: <StatusSuccess />},
+      { path: "/status/error", element: <StatusError/>},
+      { path: "/status/empty", element: <StatusEmpty />},
     ],
   },
   {

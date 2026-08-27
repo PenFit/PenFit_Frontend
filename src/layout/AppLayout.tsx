@@ -6,7 +6,9 @@ export default function AppLayout() {
   return (
     <AppFrame>
       <StatusBar />
-      <Outlet />
+      <div className="min-h-0 flex-1">
+        <Outlet />
+      </div>
     </AppFrame>
   );
 }

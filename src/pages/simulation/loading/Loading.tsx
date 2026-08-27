@@ -45,7 +45,7 @@ export default function Loading() {
     }, 7000));
 
     const navTimer = window.setTimeout(() => {
-      navigate('/home');
+      navigate('/status/success');
     }, 9500);
 
     return () => {
