@@ -1,0 +1,320 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import BottomNav from '../../components/BottomNav';
+
+interface MenuItem {
+  icon: string;
+  title: string;
+  action: () => void;
+  variant?: 'default' | 'danger';
+}
+
+export default function MyPage() {
+  const navigate = useNavigate();
+  const [nickname, setNickname] = useState('이재원님');
+  const [nicknameInput, setNicknameInput] = useState('');
+  const [showEmail, setShowEmail] = useState(false);
+  const [showNickname, setShowNickname] = useState(false);
+  const [showUnsubscribe, setShowUnsubscribe] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [unsubscribed, setUnsubscribed] = useState(false);
+
+  const menuItems: MenuItem[] = [
+    {
+      icon: 'ri-user-line',
+      title: '내 정보 보기',
+      action: () => navigate('/mypage/info'),
+    },
+    {
+      icon: 'ri-mail-line',
+      title: '내 이메일 보기',
+      action: () => setShowEmail(true),
+    },
+    {
+      icon: 'ri-edit-line',
+      title: '닉네임 수정',
+      action: () => {
+        setNicknameInput(nickname);
+        setShowNickname(true);
+      },
+    },
+  ];
+
+  const secondaryItems: MenuItem[] = [
+    {
+      icon: 'ri-mail-close-line',
+      title: '이메일 수신 거부',
+      action: () => setShowUnsubscribe(true),
+      variant: 'default',
+    },
+    {
+      icon: 'ri-logout-box-r-line',
+      title: '로그아웃',
+      action: () => setShowLogoutConfirm(true),
+      variant: 'danger',
+    },
+  ];
+
+  return (
+    <>
+        <div className="flex-1 overflow-y-auto pb-24 px-6 pt-6">
+          {/* 프로필 헤더 */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center">
+              <span className="text-lg font-bold text-primary-700">
+                이
+              </span>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-foreground-950 font-heading">
+                {nickname}
+              </h1>
+              <p className="text-sm text-foreground-500">
+                카카오 로그인
+              </p>
+            </div>
+          </div>
+
+          {/* 메인 메뉴 */}
+          <div className="space-y-3 mb-6">
+            {menuItems.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                onClick={item.action}
+                className="w-full flex items-center gap-4 bg-background-100 rounded-xl px-4 py-4 text-left hover:bg-background-200 transition-colors cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
+                  <i className={`${item.icon} text-primary-500 text-lg w-5 h-5 flex items-center justify-center`} />
+                </div>
+                <span className="text-sm font-semibold text-foreground-950 flex-1">
+                  {item.title}
+                </span>
+                <i className="ri-arrow-right-s-line text-foreground-400 text-lg w-5 h-5 flex items-center justify-center" />
+              </button>
+            ))}
+          </div>
+
+          {/* 섹션 구분 */}
+          <div className="border-t border-background-200 my-4" />
+
+          {/* 서브 메뉴 */}
+          <div className="space-y-3">
+            {secondaryItems.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                onClick={item.action}
+                className={`
+                  w-full flex items-center gap-4 rounded-xl px-4 py-4 text-left transition-colors cursor-pointer
+                  ${item.variant === 'danger'
+                    ? 'bg-accent-50 hover:bg-accent-100'
+                    : 'bg-background-100 hover:bg-background-200'
+                  }
+                `}
+              >
+                <div className={`
+                  w-10 h-10 rounded-lg flex items-center justify-center shrink-0
+                  ${item.variant === 'danger'
+                    ? 'bg-accent-100'
+                    : 'bg-primary-50'
+                  }
+                `}>
+                  <i className={`${item.icon} text-lg w-5 h-5 flex items-center justify-center
+                    ${item.variant === 'danger'
+                      ? 'text-accent-600'
+                      : 'text-primary-500'
+                    }
+                  `} />
+                </div>
+                <span className={`
+                  text-sm font-semibold flex-1
+                  ${item.variant === 'danger'
+                    ? 'text-accent-700'
+                    : 'text-foreground-950'
+                  }
+                `}>
+                  {item.title}
+                </span>
+                <i className="ri-arrow-right-s-line text-foreground-400 text-lg w-5 h-5 flex items-center justify-center" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <BottomNav />
+
+        {/* 이메일 모달 */}
+        {showEmail && (
+          <div className="absolute inset-0 bg-black/40 z-30 flex items-end">
+            <div className="w-full bg-background-50 rounded-t-2xl p-6 animate-fade-in">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-foreground-950">
+                  내 이메일
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowEmail(false)}
+                  className="w-8 h-8 rounded-full bg-background-100 flex items-center justify-center cursor-pointer"
+                >
+                  <i className="ri-close-line text-foreground-500 text-lg w-5 h-5 flex items-center justify-center" />
+                </button>
+              </div>
+              <div className="bg-background-100 rounded-xl p-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <i className="ri-mail-line text-primary-500 text-lg w-5 h-5 flex items-center justify-center" />
+                  <span className="text-sm text-foreground-950">jaewon@email.com</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEmail(false)}
+                  className="w-full border border-background-300 bg-background-50 hover:bg-background-100 text-foreground-700 font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  완료하기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmail(false)}
+                  className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  수정하기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 닉네임 수정 모달 */}
+        {showNickname && (
+          <div className="absolute inset-0 bg-black/40 z-30 flex items-end">
+            <div className="w-full bg-background-50 rounded-t-2xl p-6 animate-fade-in">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-bold text-foreground-950">
+                  닉네임 수정
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowNickname(false)}
+                  className="w-8 h-8 rounded-full bg-background-100 flex items-center justify-center cursor-pointer"
+                >
+                  <i className="ri-close-line text-foreground-500 text-lg w-5 h-5 flex items-center justify-center" />
+                </button>
+              </div>
+              <label className="block text-sm font-semibold text-foreground-700 mb-2">
+                닉네임
+              </label>
+              <input
+                type="text"
+                value={nicknameInput}
+                onChange={(e) => setNicknameInput(e.target.value)}
+                maxLength={10}
+                placeholder="닉네임을 입력하세요"
+                className="w-full bg-background-100 rounded-xl px-4 py-3 text-sm text-foreground-950 outline-none focus:ring-2 focus:ring-primary-400 border border-transparent focus:border-primary-300 transition mb-4"
+              />
+              <button
+                type="button"
+                disabled={!nicknameInput.trim()}
+                onClick={() => {
+                  setNickname(nicknameInput.trim());
+                  setShowNickname(false);
+                }}
+                className={`
+                  w-full font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap
+                  ${nicknameInput.trim()
+                    ? 'bg-primary-500 hover:bg-primary-600 text-background-50 cursor-pointer'
+                    : 'bg-background-200 text-foreground-400 cursor-not-allowed'
+                  }
+                `}
+              >
+                변경하기
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 이메일 수신 모달 */}
+        {showUnsubscribe && (
+          <div className="absolute inset-0 bg-black/40 z-30 flex items-center justify-center px-6">
+            <div className="w-full bg-background-50 rounded-2xl p-6 animate-fade-in">
+              <div className="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center mx-auto mb-4">
+                <i className="ri-mail-close-line text-accent-600 text-xl w-6 h-6 flex items-center justify-center" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground-950 text-center mb-2">
+                이메일 수신을 거부할까요?
+              </h3>
+              <p className="text-sm text-foreground-600 text-center mb-6">
+                주간 미션 분석 리포트 등 이메일을 더 이상 받지 않아요
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowUnsubscribe(false)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-foreground-700 bg-background-100 hover:bg-background-200 transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  이전
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUnsubscribed(true);
+                    setShowUnsubscribe(false);
+                    window.setTimeout(() => setUnsubscribed(false), 2500);
+                  }}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-background-50 bg-accent-500 hover:bg-accent-600 transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  수신 거부
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 수신 거부 토스트 */}
+        {unsubscribed && (
+          <div className="absolute inset-x-6 bottom-24 z-40 animate-fade-in">
+            <div className="bg-foreground-950 text-background-50 rounded-xl px-4 py-3 flex items-center gap-3">
+              <i className="ri-checkbox-circle-line text-secondary-400 text-lg w-5 h-5 flex items-center justify-center" />
+              <span className="text-sm font-semibold">
+                이메일 수신 거부가 완료됐어요
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 로그아웃 모달 */}
+        {showLogoutConfirm && (
+          <div className="absolute inset-0 bg-black/40 z-30 flex items-center justify-center px-6">
+            <div className="w-full bg-background-50 rounded-2xl p-6 animate-fade-in">
+              <div className="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center mx-auto mb-4">
+                <i className="ri-logout-box-r-line text-accent-600 text-xl w-6 h-6 flex items-center justify-center" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground-950 text-center mb-2">
+                로그아웃 할까요?
+              </h3>
+              <p className="text-sm text-foreground-600 text-center mb-6">
+                다시 로그인하면 모든 데이터가 복원돼요
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-foreground-700 bg-background-100 hover:bg-background-200 transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  이전
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-background-50 bg-accent-500 hover:bg-accent-600 transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  로그아웃
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+    </>
+  );
+}
