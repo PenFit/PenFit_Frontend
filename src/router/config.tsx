@@ -17,6 +17,10 @@ import RecommendMain from "../pages/recommend/Recommend";
 import RecommendStart from "../pages/recommend/start/RecommendStart";
 import RecommendDetail from "../pages/recommend/detail/RecommendDetail";
 import RecommendCompare from "../pages/recommend/compare/RecommendCompare";
+import Mission from "../pages/mission/Mission";
+import MissionAnalysis from "../pages/mission/analysis/MissionAnalysis";
+import MissionWeekly from "../pages/mission/weekly/MissionWeekly";
+import MissionComplete from "../pages/mission/complete/MissionComplete";
 
 // 앱에서 사용할 URL 경로와 각 경로에 보여줄 페이지 컴포넌트를 정의
 const routes: RouteObject[] = [
@@ -39,6 +43,10 @@ const routes: RouteObject[] = [
       { path: "/recommend/start", element: <RecommendStart />},
       { path: "/recommend/detail", element: <RecommendDetail />},
       { path: "/recommend/compare", element: <RecommendCompare />},
+      { path: "/mission", element: <Mission />},
+      { path: "/mission/analysis", element: <MissionAnalysis />},
+      { path: "/mission/weekly", element: <MissionWeekly />},
+      { path: "/mission/complete", element: <MissionComplete />},
     ],
   },
   {
