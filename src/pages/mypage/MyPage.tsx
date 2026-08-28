@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clearAuthSession, logout } from '../../apis/auth';
+import { deleteEmail, getMyInformation, updateEmailConsent, updateMyEmail, updateMyNickname, type UserMe } from '../../apis/user';
 import BottomNav from '../../components/BottomNav';
 
 interface MenuItem {
@@ -12,14 +13,36 @@ interface MenuItem {
 
 export default function MyPage() {
   const navigate = useNavigate();
-  const [nickname, setNickname] = useState('이재원님');
+  const [userInfo, setUserInfo] = useState<UserMe | null>(null);
+  const [nickname, setNickname] = useState('사용자님');
   const [nicknameInput, setNicknameInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
   const [showEmail, setShowEmail] = useState(false);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [showDeleteEmailConfirm, setShowDeleteEmailConfirm] = useState(false);
   const [showNickname, setShowNickname] = useState(false);
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [unsubscribed, setUnsubscribed] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [isDeletingEmail, setIsDeletingEmail] = useState(false);
+  const [isUpdatingEmailConsent, setIsUpdatingEmailConsent] = useState(false);
+  const [isUpdatingNickname, setIsUpdatingNickname] = useState(false);
+
+  useEffect(() => {
+    const fetchMyInformation = async () => {
+      try {
+        const myInformation = await getMyInformation();
+        setUserInfo(myInformation);
+        setNickname(myInformation.nickname);
+      } catch (error) {
+        console.error('내 회원정보 조회에 실패했어요.', error);
+      }
+    };
+
+    fetchMyInformation();
+  }, []);
 
   const handleLogout = async () => {
     if (isLoggingOut) {
@@ -41,6 +64,99 @@ export default function MyPage() {
     }
   };
 
+  const openEmailModal = () => {
+    setEmailInput(userInfo?.email ?? '');
+    setIsEditingEmail(false);
+    setShowEmail(true);
+  };
+
+  const handleUpdateEmail = async () => {
+    const nextEmail = emailInput.trim();
+
+    if (!nextEmail || isUpdatingEmail) {
+      return;
+    }
+
+    setIsUpdatingEmail(true);
+
+    try {
+      const updatedUser = await updateMyEmail(nextEmail);
+      setUserInfo(updatedUser);
+      setEmailInput(updatedUser.email);
+      setIsEditingEmail(false);
+      console.log('이메일 수정 성공', updatedUser);
+    } catch (error) {
+      console.error('이메일 수정에 실패했어요.', error);
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
+
+  const handleDeleteEmail = async () => {
+    if (isDeletingEmail) {
+      return;
+    }
+
+    setIsDeletingEmail(true);
+
+    try {
+      const deleteMessage = await deleteEmail();
+      setUserInfo((prev) => (prev ? { ...prev, email: '' } : prev));
+      setEmailInput('');
+      setShowDeleteEmailConfirm(false);
+      setShowEmail(false);
+      console.log('이메일 삭제 성공', deleteMessage);
+    } catch (error) {
+      console.error('이메일 삭제에 실패했어요.', error);
+    } finally {
+      setIsDeletingEmail(false);
+    }
+  };
+
+  const handleUnsubscribeEmail = async () => {
+    if (isUpdatingEmailConsent) {
+      return;
+    }
+
+    setIsUpdatingEmailConsent(true);
+
+    try {
+      const updatedUser = await updateEmailConsent(false);
+      setUserInfo(updatedUser);
+      setUnsubscribed(true);
+      setShowUnsubscribe(false);
+      window.setTimeout(() => setUnsubscribed(false), 2500);
+      console.log('이메일 수신 거부 성공', updatedUser);
+    } catch (error) {
+      console.error('이메일 수신 거부에 실패했어요.', error);
+    } finally {
+      setIsUpdatingEmailConsent(false);
+    }
+  };
+
+  const handleUpdateNickname = async () => {
+    const nextNickname = nicknameInput.trim();
+
+    if (!nextNickname || isUpdatingNickname) {
+      return;
+    }
+
+    setIsUpdatingNickname(true);
+
+    try {
+      const updatedUser = await updateMyNickname(nextNickname);
+      setUserInfo(updatedUser);
+      setNickname(updatedUser.nickname);
+      setNicknameInput(updatedUser.nickname);
+      setShowNickname(false);
+      console.log('닉네임 수정 성공', updatedUser);
+    } catch (error) {
+      console.error('닉네임 수정에 실패했어요.', error);
+    } finally {
+      setIsUpdatingNickname(false);
+    }
+  };
+
   const menuItems: MenuItem[] = [
     {
       icon: 'ri-user-line',
@@ -50,13 +166,13 @@ export default function MyPage() {
     {
       icon: 'ri-mail-line',
       title: '내 이메일 보기',
-      action: () => setShowEmail(true),
+      action: openEmailModal,
     },
     {
       icon: 'ri-edit-line',
       title: '닉네임 수정',
       action: () => {
-        setNicknameInput(nickname);
+        setNicknameInput(userInfo?.nickname ?? nickname);
         setShowNickname(true);
       },
     },
@@ -77,6 +193,15 @@ export default function MyPage() {
     },
   ];
 
+  const profileInitial = nickname.trim().charAt(0) || '사';
+  const loginProviderLabel =
+    userInfo?.loginProvider.toLowerCase() === 'kakao'
+      ? '카카오 로그인'
+      : userInfo?.loginProvider ?? '로그인 정보';
+  const userEmail = userInfo?.email ?? '이메일 정보를 불러오는 중이에요';
+  const hasEmail = Boolean(userInfo?.email);
+  const emailConsentLabel = userInfo?.emailConsent ? '수신 동의' : '수신 미동의';
+
   return (
     <>
         <div className="flex-1 overflow-y-auto pb-24 px-6 pt-6">
@@ -84,15 +209,15 @@ export default function MyPage() {
           <div className="flex items-center gap-4 mb-8">
             <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center">
               <span className="text-lg font-bold text-primary-700">
-                이
+                {profileInitial}
               </span>
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground-950 font-heading">
-                {nickname}
+                {nickname}님
               </h1>
               <p className="text-sm text-foreground-500">
-                카카오 로그인
+                {loginProviderLabel}
               </p>
             </div>
           </div>
@@ -183,25 +308,101 @@ export default function MyPage() {
                 </button>
               </div>
               <div className="bg-background-100 rounded-xl p-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <i className="ri-mail-line text-primary-500 text-lg w-5 h-5 flex items-center justify-center" />
-                  <span className="text-sm text-foreground-950">jaewon@email.com</span>
-                </div>
+                {isEditingEmail ? (
+                  <div className="flex items-center gap-3">
+                    <i className="ri-mail-line text-primary-500 text-lg w-5 h-5 flex items-center justify-center" />
+                    <input
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      className="min-w-0 flex-1 bg-transparent text-sm text-foreground-950 outline-none placeholder:text-foreground-400"
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <i className="ri-mail-line text-primary-500 text-lg w-5 h-5 flex items-center justify-center" />
+                    <span className="text-sm text-foreground-950">
+                      {hasEmail ? userEmail : '등록된 이메일이 없어요'}
+                    </span>
+                  </div>
+                )}
+                <p className="mt-2 text-xs text-foreground-500">
+                  이메일 리포트 {emailConsentLabel}
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowEmail(false)}
-                  className="w-full border border-background-300 bg-background-50 hover:bg-background-100 text-foreground-700 font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer"
+                  onClick={() => {
+                    if (isEditingEmail) {
+                      setEmailInput(userInfo?.email ?? '');
+                      setIsEditingEmail(false);
+                      return;
+                    }
+
+                    if (hasEmail) {
+                      setShowDeleteEmailConfirm(true);
+                      return;
+                    }
+
+                    setShowEmail(false);
+                  }}
+                  className={`w-full border border-background-300 bg-background-50 hover:bg-background-100 font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer ${
+                    !isEditingEmail && hasEmail ? 'text-accent-700' : 'text-foreground-700'
+                  }`}
                 >
-                  완료하기
+                  {isEditingEmail ? '취소' : hasEmail ? '삭제하기' : '완료하기'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowEmail(false)}
-                  className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer"
+                  onClick={() => {
+                    if (isEditingEmail) {
+                      handleUpdateEmail();
+                      return;
+                    }
+
+                    setEmailInput(userInfo?.email ?? '');
+                    setIsEditingEmail(true);
+                  }}
+                  disabled={isEditingEmail && (!emailInput.trim() || isUpdatingEmail)}
+                  className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  수정하기
+                  {isEditingEmail ? (isUpdatingEmail ? '저장 중' : '저장하기') : hasEmail ? '수정하기' : '등록하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 이메일 삭제 확인 모달 */}
+        {showDeleteEmailConfirm && (
+          <div className="absolute inset-0 bg-black/40 z-40 flex items-center justify-center px-6">
+            <div className="w-full bg-background-50 rounded-2xl p-6 animate-fade-in">
+              <div className="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center mx-auto mb-4">
+                <i className="ri-mail-close-line text-accent-600 text-xl w-6 h-6 flex items-center justify-center" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground-950 text-center mb-2">
+                이메일을 삭제할까요?
+              </h3>
+              <p className="text-sm text-foreground-600 text-center mb-6">
+                등록된 이메일 주소가 마이페이지에서 삭제돼요
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteEmailConfirm(false)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-foreground-700 bg-background-100 hover:bg-background-200 transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  이전
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteEmail}
+                  disabled={isDeletingEmail}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-background-50 bg-accent-500 hover:bg-accent-600 transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isDeletingEmail ? '삭제 중' : '삭제하기'}
                 </button>
               </div>
             </div>
@@ -237,20 +438,17 @@ export default function MyPage() {
               />
               <button
                 type="button"
-                disabled={!nicknameInput.trim()}
-                onClick={() => {
-                  setNickname(nicknameInput.trim());
-                  setShowNickname(false);
-                }}
+                disabled={!nicknameInput.trim() || isUpdatingNickname}
+                onClick={handleUpdateNickname}
                 className={`
                   w-full font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap
-                  ${nicknameInput.trim()
+                  ${nicknameInput.trim() && !isUpdatingNickname
                     ? 'bg-primary-500 hover:bg-primary-600 text-background-50 cursor-pointer'
                     : 'bg-background-200 text-foreground-400 cursor-not-allowed'
                   }
                 `}
               >
-                변경하기
+                {isUpdatingNickname ? '변경 중' : '변경하기'}
               </button>
             </div>
           </div>
@@ -279,14 +477,11 @@ export default function MyPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setUnsubscribed(true);
-                    setShowUnsubscribe(false);
-                    window.setTimeout(() => setUnsubscribed(false), 2500);
-                  }}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-background-50 bg-accent-500 hover:bg-accent-600 transition-colors whitespace-nowrap cursor-pointer"
+                  onClick={handleUnsubscribeEmail}
+                  disabled={isUpdatingEmailConsent}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-background-50 bg-accent-500 hover:bg-accent-600 transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  수신 거부
+                  {isUpdatingEmailConsent ? '처리 중' : '수신 거부'}
                 </button>
               </div>
             </div>

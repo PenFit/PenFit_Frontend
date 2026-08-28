@@ -6,7 +6,7 @@ export default function MyInfo() {
   const navigate = useNavigate();
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
         {/* 헤더 */}
         <div className="px-6 pt-6 pb-4 shrink-0 flex items-center gap-4">
           <button
@@ -27,7 +27,7 @@ export default function MyInfo() {
         </div>
 
         {/* 정보 섹션 */}
-        <div className="flex-1 overflow-y-auto px-6 pb-20 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-28 space-y-6">
           {userProfileSections.map((section) => (
             <div key={section.id} className="bg-background-100 rounded-2xl p-5">
               {/* 각 섹션 헤더 */}
@@ -77,6 +77,6 @@ export default function MyInfo() {
         </div>
 
         <BottomNav />
-    </>
+    </div>
   );
 }

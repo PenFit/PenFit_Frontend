@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getMyInformation, updateEmailConsent, updateMyEmail } from '../../apis/user';
+import Button from '../../components/Button';
 import BottomNav from '../../components/BottomNav';
 import { emailReportItems, weeklyMissions } from '../../mocks/missionData';
 
@@ -7,9 +9,56 @@ export default function Mission() {
   const navigate = useNavigate();
   const [agreed, setAgreed] = useState(false);
   const [emailConsentChecked, setEmailConsentChecked] = useState(false);
-  const [email, setEmail] = useState('jaewon@email.com');
+  const [email, setEmail] = useState('');
+  const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
+  const [showEmailRequiredAlert, setShowEmailRequiredAlert] = useState(false);
 
   const hasMissions = weeklyMissions.length > 0;
+
+  useEffect(() => {
+    const fetchMyInformation = async () => {
+      try {
+        const myInformation = await getMyInformation();
+        setEmail(myInformation.email);
+        setAgreed(myInformation.emailConsent);
+      } catch (error) {
+        console.error('이메일 정보 조회에 실패했어요.', error);
+      }
+    };
+
+    fetchMyInformation();
+  }, []);
+
+  const handleReceiveMissionAnalysis = async () => {
+    const nextEmail = email.trim();
+
+    if (!emailConsentChecked || !nextEmail || isSubmittingConsent) {
+      return;
+    }
+
+    setIsSubmittingConsent(true);
+
+    try {
+      await updateMyEmail(nextEmail);
+      const updatedUser = await updateEmailConsent(true);
+      setEmail(updatedUser.email);
+      setAgreed(true);
+      console.log('이메일 수신 동의 성공', updatedUser);
+    } catch (error) {
+      console.error('이메일 수신 동의에 실패했어요.', error);
+    } finally {
+      setIsSubmittingConsent(false);
+    }
+  };
+
+  const handleToggleEmailConsent = () => {
+    if (!email.trim()) {
+      setShowEmailRequiredAlert(true);
+      return;
+    }
+
+    setEmailConsentChecked(!emailConsentChecked);
+  };
 
   if (!agreed) {
     return (
@@ -68,7 +117,7 @@ export default function Mission() {
             <div className="flex items-start gap-3 mb-8">
               <button
                 type="button"
-                onClick={() => setEmailConsentChecked(!emailConsentChecked)}
+                onClick={handleToggleEmailConsent}
                 className="mt-0.5 w-5 h-5 rounded border-2 border-background-300 flex items-center justify-center shrink-0 cursor-pointer"
               >
                 {emailConsentChecked && (
@@ -83,21 +132,37 @@ export default function Mission() {
             {/* 제출 버튼 */}
             <button
               type="button"
-              disabled={!emailConsentChecked}
-              onClick={() => setAgreed(true)}
+              disabled={!emailConsentChecked || !email.trim() || isSubmittingConsent}
+              onClick={handleReceiveMissionAnalysis}
               className={`
                 w-full py-3.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer
-                ${emailConsentChecked
+                ${emailConsentChecked && email.trim()
                   ? 'bg-primary-500 hover:bg-primary-600 text-background-50'
                   : 'bg-background-200 text-foreground-400 cursor-not-allowed'
                 }
               `}
             >
-              미션 분석 받기
+              {isSubmittingConsent ? '처리 중' : '미션 분석 받기'}
             </button>
           </div>
 
           <BottomNav />
+
+          {showEmailRequiredAlert && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 px-6 animate-fade-in">
+              <section className="w-full max-w-sm rounded-lg bg-background-50 p-6 text-center">
+                <h2 className="mb-2 font-heading text-base font-bold text-foreground-950">
+                  이메일을 먼저 입력해주세요
+                </h2>
+                <p className="mb-5 text-sm leading-relaxed text-foreground-700">
+                  주간 미션 분석 결과를 받을 이메일 주소가 필요해요.
+                </p>
+                <Button className="py-3" onClick={() => setShowEmailRequiredAlert(false)}>
+                  확인
+                </Button>
+              </section>
+            </div>
+          )}
       </>
     );
   }
