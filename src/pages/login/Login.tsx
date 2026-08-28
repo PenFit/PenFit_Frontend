@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import icon from "../../assets/icon.png";
 import kakaoButton from "../../assets/kakao_button.png";
 import Button from "../../components/Button";
@@ -8,16 +7,23 @@ export default function Login() {
   const [agreed, setAgreed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showAgreementAlert, setShowAgreementAlert] = useState(false);
-  const navigate = useNavigate();
 
-  // 동의 전에는 경고 모달을 띄움. 동의 후에는 다음 단계로 이동
+  // 동의 전에는 경고 모달을 띄움. 동의 후에는 카카오 인가 페이지로 이동
   const handleKakaoLogin = () => {
     if (!agreed) {
       setShowAgreementAlert(true);
       return;
     }
 
-    navigate("/step1");
+    const kakaoRestApiKey = import.meta.env.VITE_KAKAO_REST_API;
+    const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
+    const kakaoAuthUrl = new URL("https://kauth.kakao.com/oauth/authorize");
+
+    kakaoAuthUrl.searchParams.set("response_type", "code");
+    kakaoAuthUrl.searchParams.set("client_id", kakaoRestApiKey);
+    kakaoAuthUrl.searchParams.set("redirect_uri", redirectUri);
+
+    window.location.href = kakaoAuthUrl.toString();
   };
 
   return (
@@ -48,7 +54,7 @@ export default function Login() {
           <img
             src={kakaoButton}
             alt="카카오로 3초 만에 시작하기"
-            className={`w-full ${agreed ? "opacity-100" : "opacity-40"}`}
+            className={`w-full ${agreed ? "opacity-100" : "opacity-40"} cursor-pointer`}
           />
         </button>
 

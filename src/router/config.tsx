@@ -28,6 +28,7 @@ import MyInfo from "../pages/mypage/my_info/MyInfo";
 import StatusSuccess from "../pages/status/Success";
 import StatusError from "../pages/status/Error";
 import StatusEmpty from "../pages/status/Empty";
+import KakaoCallback from "../pages/oauth/kakao/KakaoCallback";
 
 // 앱에서 사용할 URL 경로와 각 경로에 보여줄 페이지 컴포넌트를 정의
 const routes: RouteObject[] = [
@@ -36,6 +37,7 @@ const routes: RouteObject[] = [
     children: [
       { path: "/", element: <Splash /> },
       { path: "/login", element: <Login /> },
+      { path: "/oauth/kakao/callback", element: <KakaoCallback /> },
       { path: "/step1", element: <Step1 />},
       { path: "/step2", element: <Step2 />},
       { path: "/step3", element: <Step3 />},
