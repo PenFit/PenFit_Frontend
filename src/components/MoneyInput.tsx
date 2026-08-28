@@ -13,6 +13,8 @@ export default function MoneyInput({
   icon,
   suffix = '만원',
 }: MoneyInputProps) {
+  const formattedValue = value ? Number(value).toLocaleString('ko-KR') : '';
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/[^\d]/g, '');
     onChange(digits);
@@ -43,7 +45,7 @@ export default function MoneyInput({
         <input
           type="text"
           inputMode="numeric"
-          value={value}
+          value={formattedValue}
           onChange={handleChange}
           placeholder={placeholder}
           className="w-full bg-transparent text-sm font-medium text-foreground-950 outline-none placeholder:text-foreground-400"

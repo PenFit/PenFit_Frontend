@@ -18,7 +18,7 @@ interface UserProfileSection {
 }
 
 function formatMoney(value: number) {
-  return `${value.toLocaleString('ko-KR')}만원`;
+  return `${value.toLocaleString('ko-KR')}원`;
 }
 
 function createUserProfileSections(profile: FinancialProfile): UserProfileSection[] {

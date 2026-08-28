@@ -41,7 +41,7 @@ export default function KakaoCallback() {
         const authData = await loginWithKakaoCode(code);
         saveAuthSession(authData);
         console.log("카카오 로그인 성공", authData);
-        navigate("/step1", { replace: true });
+        navigate(authData.newUser ? "/step1" : "/home", { replace: true });
       } catch {
         setErrorMessage("카카오 로그인에 실패했어요. 다시 시도해주세요.");
       }
