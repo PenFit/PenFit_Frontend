@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { clearAuthSession, logout } from '../../apis/auth';
 import BottomNav from '../../components/BottomNav';
 
 interface MenuItem {
@@ -18,6 +19,27 @@ export default function MyPage() {
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [unsubscribed, setUnsubscribed] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      const logoutData = await logout();
+      console.log('로그아웃 성공', logoutData);
+    } catch (error) {
+      console.error('로그아웃 API 호출에 실패했어요.', error);
+    } finally {
+      clearAuthSession();
+      setShowLogoutConfirm(false);
+      setIsLoggingOut(false);
+      navigate('/login', { replace: true });
+    }
+  };
 
   const menuItems: MenuItem[] = [
     {
@@ -306,10 +328,11 @@ export default function MyPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate('/')}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-background-50 bg-accent-500 hover:bg-accent-600 transition-colors whitespace-nowrap cursor-pointer"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-background-50 bg-accent-500 hover:bg-accent-600 transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  로그아웃
+                  {isLoggingOut ? '로그아웃 중' : '로그아웃'}
                 </button>
               </div>
             </div>
