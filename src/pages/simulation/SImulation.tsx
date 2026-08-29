@@ -1,28 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { completeRehearsal, saveRehearsalAnswer } from '../../apis/simulation';
 import ProgressBar from '../../components/ProgressBar';
 import SimOptionCard from '../../components/SimOptionCard';
 import NotFound from '../NotFound';
-import { useSimulation, useSimulations } from '../../hooks/useSimulations';
+import { useRehearsalProgress, useSimulations, useStoredRehearsalId } from '../../hooks/useSimulations';
 import { Navigate } from 'react-router-dom';
 
 export default function Simulation() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { step } = useParams<{ step: string }>();
+  const rehearsalId = useStoredRehearsalId();
 
   const stepNum = parseInt(step || '1', 10);
-  const { data: simulation, isLoading } = useSimulation(stepNum);
-  const { data: allSimulations } = useSimulations();
+  const { data: allSimulations, isLoading } = useSimulations();
+  const { data: rehearsalProgress, isLoading: isProgressLoading } = useRehearsalProgress();
   const total = allSimulations?.length ?? 0;
+  const simulation = allSimulations?.find((item) => item.id === stepNum);
+  const savedAnswer = rehearsalProgress?.answers.find(
+    (answer) => answer.scenarioCode === simulation?.scenarioCode,
+  );
 
   const [selected, setSelected] = useState<string>('');
+  const [isSavingAnswer, setIsSavingAnswer] = useState(false);
+
+  useEffect(() => {
+    setSelected(savedAnswer?.optionCode ?? '');
+  }, [savedAnswer?.optionCode, stepNum]);
+
+  if (!rehearsalId) {
+    return <Navigate to="/result-preview" replace />;
+  }
 
   // step 값이 숫자가 아니거나 문항 범위를 벗어나면 첫 번째 시뮬레이션으로 이동
-  if (step && (Number.isNaN(stepNum) || stepNum < 1 || stepNum > total)) {
+  if (step && (Number.isNaN(stepNum) || stepNum < 1 || (total > 0 && stepNum > total))) {
     return <Navigate to="/simulation/1" replace />;
   }
 
-  if (isLoading) {
+  if (isLoading || isProgressLoading) {
     return (
       <>
         <div className="flex-1 flex items-center justify-center">
@@ -42,9 +60,69 @@ export default function Simulation() {
   const isLast = stepNum === total;
   const nextPath = isLast ? '/loading' : `/simulation/${stepNum + 1}`;
 
+  const handleNext = async () => {
+    if (!selected || !simulation.scenarioCode || isSavingAnswer) {
+      return;
+    }
+
+    if (savedAnswer?.optionCode === selected) {
+      if (!isLast) {
+        navigate(nextPath);
+        return;
+      }
+
+      setIsSavingAnswer(true);
+
+      try {
+        const completeResult = await completeRehearsal(rehearsalId);
+        sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(completeResult));
+        console.log('리허설 완료 제출 성공', completeResult);
+        navigate(nextPath);
+      } catch (error) {
+        if (isAxiosError(error)) {
+          console.error('리허설 완료 제출 실패 응답', error.response?.data);
+        }
+        console.error('리허설 완료 제출에 실패했어요.', error);
+      } finally {
+        setIsSavingAnswer(false);
+      }
+
+      return;
+    }
+
+    setIsSavingAnswer(true);
+
+    try {
+      const answerResult = await saveRehearsalAnswer(
+        rehearsalId,
+        simulation.scenarioCode,
+        selected,
+      );
+
+      sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(answerResult));
+      queryClient.invalidateQueries({ queryKey: ['simulations', rehearsalId, 'progress'] });
+      console.log('리허설 답변 저장 성공', answerResult);
+
+      if (isLast) {
+        const completeResult = await completeRehearsal(rehearsalId);
+        sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(completeResult));
+        console.log('리허설 완료 제출 성공', completeResult);
+      }
+
+      navigate(nextPath);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        console.error('리허설 답변 처리 실패 응답', error.response?.data);
+      }
+      console.error('리허설 답변 처리에 실패했어요.', error);
+    } finally {
+      setIsSavingAnswer(false);
+    }
+  };
+
   return (
     <>
-        <ProgressBar current={stepNum} total={6} />
+        <ProgressBar current={stepNum} total={total} />
 
         {/* 뱃지 */}
         <div className="px-6 pt-5 pb-2 shrink-0">
@@ -88,7 +166,7 @@ export default function Simulation() {
             {simulation.options.map((opt) => (
               <SimOptionCard
                 key={opt.value}
-                letter={opt.value.toUpperCase()}
+                letter={opt.letter ?? opt.value.toUpperCase()}
                 label={opt.label}
                 subtitle={opt.subtitle}
                 selected={selected === opt.value}
@@ -102,17 +180,17 @@ export default function Simulation() {
         <div className="px-6 py-5 shrink-0 bg-background-50 border-t border-background-100">
           <button
             type="button"
-            onClick={() => navigate(nextPath)}
-            disabled={!selected}
+            onClick={handleNext}
+            disabled={!selected || isSavingAnswer}
             className={`
               w-full font-semibold py-4 rounded-lg transition-colors whitespace-nowrap
-              ${selected
+              ${selected && !isSavingAnswer
                 ? 'bg-primary-500 hover:bg-primary-600 text-background-50'
                 : 'bg-background-200 text-foreground-400 cursor-not-allowed'
               }
             `}
           >
-            {isLast ? '분석 시작하기' : '다음 단계'}
+            {isSavingAnswer ? (isLast ? '분석 요청 중' : '저장 중') : isLast ? '분석 시작하기' : '다음 단계'}
           </button>
         </div>
     </>

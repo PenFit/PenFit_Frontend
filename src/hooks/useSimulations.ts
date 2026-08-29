@@ -1,35 +1,95 @@
 import { useQuery } from '@tanstack/react-query';
-import { simulations, type Simulation } from '../mocks/simulations';
+import {
+  getRehearsalProgress,
+  getRehearsalScenarios,
+  type RehearsalScenario,
+} from '../apis/simulation';
+import type { Simulation } from '../mocks/simulations';
 
 export const simulationKeys = {
   all: ['simulations'] as const,
-  detail: (id: number) => [...simulationKeys.all, id] as const,
+  list: (rehearsalId: number | null) => [...simulationKeys.all, rehearsalId] as const,
+  detail: (rehearsalId: number | null, id: number) => [...simulationKeys.list(rehearsalId), id] as const,
+  progress: (rehearsalId: number | null) => [...simulationKeys.all, rehearsalId, 'progress'] as const,
 };
 
-// 목 데이터를 비동기로 내려주는 가짜 API 함수
-// 실제 백엔드 연동 시 이 함수만 실제 서버 호출로 바꾸면 됨
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+function getStoredRehearsalId() {
+  const storedRehearsal = sessionStorage.getItem('rehearsalStart');
 
-async function fetchSimulations(): Promise<Simulation[]> {
-  await wait(300);
-  return simulations;
+  if (!storedRehearsal) {
+    return null;
+  }
+
+  try {
+    const rehearsal = JSON.parse(storedRehearsal) as { rehearsalId?: number };
+
+    return rehearsal.rehearsalId ?? null;
+  } catch {
+    return null;
+  }
 }
 
-async function fetchSimulation(id: number): Promise<Simulation | null> {
-  await wait(200);
-  return simulations.find((s) => s.id === id) ?? null;
+function mapScenarioToSimulation(scenario: RehearsalScenario): Simulation {
+  return {
+    id: scenario.displayOrder,
+    scenarioCode: scenario.scenarioCode,
+    badge: scenario.badge,
+    title: scenario.title,
+    description: scenario.situation,
+    stats: scenario.contextCards,
+    question: scenario.question,
+    options: scenario.options.map((option) => ({
+      value: option.optionCode,
+      letter: option.label,
+      label: option.title,
+      subtitle: option.description,
+    })),
+  };
+}
+
+async function fetchSimulations(rehearsalId: number): Promise<Simulation[]> {
+  const scenarios = await getRehearsalScenarios(rehearsalId);
+
+  return scenarios
+    .slice()
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map(mapScenarioToSimulation);
 }
 
 export function useSimulations() {
+  const rehearsalId = getStoredRehearsalId();
+
   return useQuery({
-    queryKey: simulationKeys.all,
-    queryFn: fetchSimulations,
+    queryKey: simulationKeys.list(rehearsalId),
+    queryFn: () => fetchSimulations(rehearsalId as number),
+    enabled: rehearsalId !== null,
   });
 }
 
 export function useSimulation(id: number) {
+  const rehearsalId = getStoredRehearsalId();
+
   return useQuery({
-    queryKey: simulationKeys.detail(id),
-    queryFn: () => fetchSimulation(id),
+    queryKey: simulationKeys.detail(rehearsalId, id),
+    queryFn: async () => {
+      const simulationList = await fetchSimulations(rehearsalId as number);
+
+      return simulationList.find((simulation) => simulation.id === id) ?? null;
+    },
+    enabled: rehearsalId !== null,
+  });
+}
+
+export function useStoredRehearsalId() {
+  return getStoredRehearsalId();
+}
+
+export function useRehearsalProgress() {
+  const rehearsalId = getStoredRehearsalId();
+
+  return useQuery({
+    queryKey: simulationKeys.progress(rehearsalId),
+    queryFn: () => getRehearsalProgress(rehearsalId as number),
+    enabled: rehearsalId !== null,
   });
 }

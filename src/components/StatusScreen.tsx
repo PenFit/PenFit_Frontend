@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 interface StatusAction {
   label: string;
   path?: string;
+  onClick?: () => void | Promise<void>;
   variant?: 'primary' | 'secondary';
+  disabled?: boolean;
 }
 
 interface StatusScreenProps {
@@ -27,7 +29,16 @@ export default function StatusScreen({
 }: StatusScreenProps) {
   const navigate = useNavigate();
 
-  const handleClick = (action: StatusAction) => {
+  const handleClick = async (action: StatusAction) => {
+    if (action.disabled) {
+      return;
+    }
+
+    if (action.onClick) {
+      await action.onClick();
+      return;
+    }
+
     if (action.path) {
       navigate(action.path);
     }
@@ -63,12 +74,14 @@ export default function StatusScreen({
           <button
             type="button"
             onClick={() => handleClick(primaryAction)}
+            disabled={primaryAction.disabled}
             className={`
               w-full py-3.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer animate-fade-in
               ${primaryAction.variant === 'secondary'
                 ? 'bg-background-100 hover:bg-background-200 text-foreground-700 border border-background-200'
                 : 'bg-primary-500 hover:bg-primary-600 text-background-50'
               }
+              ${primaryAction.disabled ? 'opacity-50 cursor-not-allowed' : ''}
             `}
           >
             {primaryAction.label}
@@ -79,12 +92,14 @@ export default function StatusScreen({
             <button
               type="button"
               onClick={() => handleClick(secondaryAction)}
+              disabled={secondaryAction.disabled}
               className={`
                 mt-3 w-full py-3 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer animate-fade-in
                 ${secondaryAction.variant === 'secondary'
                   ? 'bg-background-100 hover:bg-background-200 text-foreground-700 border border-background-200'
                   : 'text-foreground-400 hover:text-foreground-600'
                 }
+                ${secondaryAction.disabled ? 'opacity-50 cursor-not-allowed' : ''}
               `}
             >
               {secondaryAction.label}

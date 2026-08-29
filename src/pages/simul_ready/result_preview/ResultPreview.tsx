@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { startRehearsal } from '../../../apis/simulation';
 import { getPensionSetup, type PensionSetup } from '../../../apis/setup';
 import ProgressBar from '../../../components/ProgressBar';
 import BarChart from '../../../components/BarChart';
 
 const PREVIEW_STORAGE_KEY = 'pensionSetupPreview';
+const REHEARSAL_STORAGE_KEY = 'rehearsalStart';
 
 function formatWon(value: number) {
   return `${value.toLocaleString('ko-KR')}원`;
@@ -50,6 +53,7 @@ export default function ResultPreview() {
   const [showDetails, setShowDetails] = useState(false);
   const [pensionSetup, setPensionSetup] = useState<PensionSetup | null>(() => getStoredPensionSetup());
   const [isLoading, setIsLoading] = useState(() => !sessionStorage.getItem(PREVIEW_STORAGE_KEY));
+  const [isStartingRehearsal, setIsStartingRehearsal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -84,6 +88,28 @@ export default function ResultPreview() {
   const totalContribution = pensionSetup
     ? pensionSetup.monthlyContribution * 12 * pensionSetup.contributionYears
     : 0;
+
+  const handleStartRehearsal = async () => {
+    if (isStartingRehearsal) {
+      return;
+    }
+
+    setIsStartingRehearsal(true);
+
+    try {
+      const rehearsal = await startRehearsal();
+      sessionStorage.setItem(REHEARSAL_STORAGE_KEY, JSON.stringify(rehearsal));
+      console.log('연금 리허설 시작 성공', rehearsal);
+      navigate('/simulation/1');
+    } catch (error) {
+      if (isAxiosError(error)) {
+        console.error('연금 리허설 시작 실패 응답', error.response?.data);
+      }
+      console.error('연금 리허설 시작에 실패했어요.', error);
+    } finally {
+      setIsStartingRehearsal(false);
+    }
+  };
 
   return (
     <>
@@ -206,10 +232,11 @@ export default function ResultPreview() {
         <div className="px-6 py-5 shrink-0 bg-background-50 border-t border-background-100">
           <button
             type="button"
-            onClick={() => navigate('/simulation/1')}
-            className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-4 rounded-lg transition-colors whitespace-nowrap"
+            onClick={handleStartRehearsal}
+            disabled={isStartingRehearsal || isLoading || Boolean(errorMessage)}
+            className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-4 rounded-lg transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
           >
-            30년 리허설 시작하기
+            {isStartingRehearsal ? '리허설 시작 중' : '30년 리허설 시작하기'}
           </button>
         </div>
     </>

@@ -1,5 +1,6 @@
 export interface SimOption {
   value: string;
+  letter?: string;
   label: string;
   subtitle?: string;
 }
@@ -11,6 +12,7 @@ export interface SimStat {
 
 export interface Simulation {
   id: number;
+  scenarioCode?: string;
   badge: string;
   title: string;
   description: string;
