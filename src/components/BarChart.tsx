@@ -7,7 +7,18 @@ const BAR_AREA_HEIGHT = 152;
 const MIN_BAR_HEIGHT = 6;
 
 function formatValue(value: number) {
-  return `${value.toLocaleString()}만`;
+  if (value < 10000) {
+    return `${value.toLocaleString('ko-KR')}만`;
+  }
+
+  const eok = Math.floor(value / 10000);
+  const remainingManwon = value % 10000;
+
+  if (remainingManwon === 0) {
+    return `${eok.toLocaleString('ko-KR')}억`;
+  }
+
+  return `${eok.toLocaleString('ko-KR')}억 ${remainingManwon.toLocaleString('ko-KR')}만`;
 }
 
 export default function BarChart({ data, highlightIndex }: BarChartProps) {
@@ -46,7 +57,7 @@ export default function BarChart({ data, highlightIndex }: BarChartProps) {
               style={{ height: BAR_AREA_HEIGHT }}
             >
               <span
-                className={`whitespace-nowrap text-[10px] font-bold transition-opacity ${
+                className={`whitespace-nowrap text-center text-[9px] font-bold transition-opacity ${
                   isHighlight
                     ? "text-primary-700 opacity-100"
                     : "text-foreground-500 opacity-0 group-hover:opacity-100"

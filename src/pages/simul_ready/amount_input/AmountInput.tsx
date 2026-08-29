@@ -1,12 +1,51 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { isAxiosError } from 'axios';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { createPensionSetup } from '../../../apis/setup';
 import ProgressBar from '../../../components/ProgressBar';
 import AmountSlider from '../../../components/AmountSlider';
 
+interface AmountInputLocationState {
+  accountType?: string;
+}
+
 export default function AmountInput() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as AmountInputLocationState | null;
 
   const [amount, setAmount] = useState<number>(10);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const selectedAccountType =
+    locationState?.accountType ?? sessionStorage.getItem('selectedPensionAccountType');
+
+  const handlePreview = async () => {
+    if (!selectedAccountType || isSubmitting) {
+      navigate('/account-select', { replace: true });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const pensionSetup = await createPensionSetup({
+        accountType: selectedAccountType,
+        monthlyContribution: amount * 10000,
+      });
+
+      sessionStorage.setItem('pensionSetupPreview', JSON.stringify(pensionSetup));
+      console.log('연금 설정 등록 성공', pensionSetup);
+      navigate('/result-preview');
+    } catch (error) {
+      if (isAxiosError(error)) {
+        console.error('연금 설정 등록 실패 응답', error.response?.data);
+      }
+      console.error('연금 설정 등록에 실패했어요.', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -59,10 +98,11 @@ export default function AmountInput() {
         <div className="px-6 py-5 shrink-0 bg-background-50 border-t border-background-100">
           <button
             type="button"
-            onClick={() => navigate('/result-preview')}
-            className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-4 rounded-lg transition-colors whitespace-nowrap"
+            onClick={handlePreview}
+            disabled={isSubmitting}
+            className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-4 rounded-lg transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
           >
-            결과 미리보기
+            {isSubmitting ? '등록 중' : '결과 미리보기'}
           </button>
         </div>
     </>
