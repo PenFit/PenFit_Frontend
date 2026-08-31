@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { saveSelectedProductRecommendation } from '../pages/recommend/recommendationStorage';
 
 interface RecommendProductCardProps {
   product: {
@@ -13,6 +14,7 @@ interface RecommendProductCardProps {
     feeMin?: number;
     feeMax?: number;
     reason?: string;
+    fitLevel?: string;
   };
   rank: number;
   compact?: boolean;
@@ -24,11 +26,15 @@ export default function RecommendProductCard({
   compact = false,
 }: RecommendProductCardProps) {
   const navigate = useNavigate();
+  const navigateToDetail = () => {
+    saveSelectedProductRecommendation(product.id);
+    navigate('/recommend/detail');
+  };
 
   if (compact) {
     return (
       <div
-        onClick={() => navigate('/recommend/detail')}
+        onClick={navigateToDetail}
         className="bg-background-50 border border-background-200 rounded-xl p-5 animate-fade-in cursor-pointer hover:border-primary-200 hover:bg-primary-50/30 transition-colors"
         style={{ animationDelay: `${rank * 0.08}s` }}
       >
@@ -54,21 +60,21 @@ export default function RecommendProductCard({
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-lg bg-background-100 p-2">
-            <p className="mb-0.5 text-[10px] font-medium text-foreground-500">ETF</p>
+            <p className="mb-0.5 text-[10px] font-medium text-foreground-500">적합도</p>
             <p className="text-xs font-bold text-foreground-950">
-              {product.etfCount?.toLocaleString('ko-KR')}종
+              {product.fitLevel ?? '-'}
             </p>
           </div>
           <div className="rounded-lg bg-background-100 p-2">
-            <p className="mb-0.5 text-[10px] font-medium text-foreground-500">펀드</p>
+            <p className="mb-0.5 text-[10px] font-medium text-foreground-500">계좌</p>
             <p className="text-xs font-bold text-foreground-950">
-              {product.fundCount?.toLocaleString('ko-KR')}종
+              {product.productType}
             </p>
           </div>
           <div className="rounded-lg bg-background-100 p-2">
-            <p className="mb-0.5 text-[10px] font-medium text-foreground-500">수수료</p>
+            <p className="mb-0.5 text-[10px] font-medium text-foreground-500">순위</p>
             <p className="text-xs font-bold text-primary-600">
-              {product.feeMin}~{product.feeMax}%
+              {rank}위
             </p>
           </div>
         </div>
@@ -106,7 +112,7 @@ export default function RecommendProductCard({
 
       <button
         type="button"
-        onClick={() => navigate('/recommend/detail')}
+        onClick={navigateToDetail}
         className="mt-4 text-sm font-semibold text-primary-600 underline underline-offset-2 cursor-pointer"
       >
         상세보기

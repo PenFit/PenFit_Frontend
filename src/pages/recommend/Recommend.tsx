@@ -1,36 +1,46 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { isAxiosError } from 'axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { deleteSavedProduct, getMySavedProducts } from '../../apis/recommend';
 import BottomNav from '../../components/BottomNav';
-
-interface SavedProduct {
-  id: string;
-  name: string;
-  shortName: string;
-  productType?: string;
-  summary: string;
-  addedAt: string;
-}
+import { saveSelectedProductRecommendation } from './recommendationStorage';
 
 export default function RecommendMain() {
   const navigate = useNavigate();
-  const [savedProducts, setSavedProducts] = useState<SavedProduct[]>([]);
+  const queryClient = useQueryClient();
+  const {
+    data: savedProducts = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['mySavedProducts'],
+    queryFn: getMySavedProducts,
+  });
 
-  useEffect(() => {
-    const raw = localStorage.getItem('pension_saved_products');
-    if (raw) {
-      try {
-        setSavedProducts(JSON.parse(raw));
-      } catch {
-        setSavedProducts([]);
-      }
-    }
-  }, []);
-
-  const handleRemove = (id: string) => {
-    const next = savedProducts.filter((p) => p.id !== id);
-    setSavedProducts(next);
-    localStorage.setItem('pension_saved_products', JSON.stringify(next));
+  const handleDetail = (productId: number) => {
+    saveSelectedProductRecommendation(String(productId));
+    navigate('/recommend/detail');
   };
+
+  const handleDelete = async (productId: number) => {
+    try {
+      const deleteResult = await deleteSavedProduct(productId);
+
+      queryClient.invalidateQueries({ queryKey: ['mySavedProducts'] });
+      queryClient.invalidateQueries({ queryKey: ['pensionProductDetail', productId] });
+      console.log('담은 상품 취소 성공', deleteResult);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        console.error('담은 상품 취소 실패 응답', error.response?.data);
+      }
+      console.error('담은 상품 취소에 실패했어요.', error);
+    }
+  };
+
+  const errorMessage = isAxiosError(error)
+    ? error.response?.data?.message
+    : undefined;
 
   return (
     <>
@@ -58,7 +68,14 @@ export default function RecommendMain() {
       </div>
 
       {/* 빈상태 or 리스트 */}
-      {savedProducts.length === 0 ? (
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center px-5 py-20">
+          <i className="ri-loader-4-line mb-3 flex h-8 w-8 animate-spin items-center justify-center text-2xl text-primary-500" />
+          <p className="text-sm text-foreground-500">담은 상품을 불러오는 중...</p>
+        </div>
+      )}
+
+      {!isLoading && (isError || savedProducts.length === 0) ? (
         <div className="px-5 mt-8">
           <div className="bg-background-100 rounded-xl p-8 text-center">
             <div className="w-16 h-16 mx-auto bg-background-200 rounded-full flex items-center justify-center mb-4">
@@ -68,9 +85,9 @@ export default function RecommendMain() {
               아직 담은 상품이 없어요
             </p>
             <p className="text-sm text-foreground-500 mb-6 leading-relaxed">
-              처음에 아무것도 없으면
+              {errorMessage ?? '관심 있는 상품을 담으면'}
               <br />
-              추천 받으라고 문구
+              여기에서 다시 확인할 수 있어요
             </p>
             <button
               type="button"
@@ -81,20 +98,22 @@ export default function RecommendMain() {
             </button>
           </div>
         </div>
-      ) : (
+      ) : null}
+
+      {!isLoading && !isError && savedProducts.length > 0 && (
         <div className="px-5 mt-4 space-y-3">
           {savedProducts.map((product) => (
             <div
-              key={product.id}
+              key={product.productId}
               className="bg-background-50 border border-background-200 rounded-xl p-4"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <span className="inline-block bg-secondary-100 text-secondary-900 text-xs font-semibold px-2 py-0.5 rounded-md mb-2">
-                    {product.productType ?? (product.name.includes('계좌') ? '연금저축계좌' : '연금저축펀드')}
+                    {product.accountType.displayName}
                   </span>
                   <h3 className="text-base font-bold text-foreground-950">
-                    {product.name}
+                    {product.providerName} {product.productName}
                   </h3>
                   <p className="text-sm text-foreground-500 mt-1">
                     {product.summary}
@@ -102,16 +121,31 @@ export default function RecommendMain() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRemove(product.id)}
-                  className="ml-3 w-8 h-8 flex items-center justify-center text-foreground-400 hover:text-accent-500 transition-colors cursor-pointer"
+                  onClick={() => handleDelete(product.productId)}
+                  className="ml-3 flex h-8 w-8 shrink-0 items-center justify-center text-foreground-400 transition-colors hover:text-accent-500"
+                  aria-label="담은 상품 취소"
                 >
                   <i className="ri-close-line text-lg" />
                 </button>
               </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-background-100 px-3 py-2">
+                  <p className="text-[10px] font-medium text-foreground-500">수수료</p>
+                  <p className="text-xs font-bold text-foreground-950">
+                    연 {product.feeMinRate}%~{product.feeMaxRate}%
+                  </p>
+                </div>
+                <div className="rounded-lg bg-background-100 px-3 py-2">
+                  <p className="text-[10px] font-medium text-foreground-500">담은 날짜</p>
+                  <p className="text-xs font-bold text-foreground-950">
+                    {new Date(product.savedAt).toLocaleDateString('ko-KR')}
+                  </p>
+                </div>
+              </div>
               <div className="flex gap-2 mt-4">
                 <button
                   type="button"
-                  onClick={() => navigate('/recommend/detail')}
+                  onClick={() => handleDetail(product.productId)}
                   className="flex-1 border border-background-300 text-foreground-700 text-sm font-medium py-2 rounded-lg cursor-pointer whitespace-nowrap"
                 >
                   상세보기
