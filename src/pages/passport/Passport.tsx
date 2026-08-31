@@ -1,8 +1,72 @@
 import { useState } from 'react';
+import { isAxiosError } from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { getMyPensionPassport } from '../../apis/passport';
 import BottomNav from '../../components/BottomNav';
 
+function formatWon(amount: number) {
+  return `${amount.toLocaleString()}원`;
+}
+
 export default function Passport() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'personality' | 'detail'>('personality');
+  const {
+    data: passport,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['pensionPassport'],
+    queryFn: getMyPensionPassport,
+  });
+
+  const errorMessage = isAxiosError(error)
+    ? error.response?.data?.message
+    : undefined;
+
+  if (isLoading) {
+    return (
+      <>
+        <div className="flex-1 overflow-y-auto pb-24">
+          <div className="flex h-full flex-col items-center justify-center px-6">
+            <i className="ri-loader-4-line mb-3 flex h-8 w-8 animate-spin items-center justify-center text-2xl text-primary-500" />
+            <p className="text-sm text-foreground-500">패스포트를 불러오는 중...</p>
+          </div>
+        </div>
+        <BottomNav />
+      </>
+    );
+  }
+
+  if (isError || !passport) {
+    return (
+      <>
+        <div className="flex-1 overflow-y-auto pb-24">
+          <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-background-100">
+              <i className="ri-passport-line flex h-8 w-8 items-center justify-center text-2xl text-foreground-400" />
+            </div>
+            <h1 className="mb-2 text-xl font-bold text-foreground-950 font-heading">
+              패스포트가 아직 없어요
+            </h1>
+            <p className="mb-6 text-sm leading-relaxed text-foreground-500">
+              {errorMessage ?? '연금 리허설 분석이 완료되면 패스포트를 확인할 수 있어요.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/result-preview')}
+              className="w-full rounded-lg bg-primary-500 py-4 text-sm font-semibold text-background-50 transition-colors hover:bg-primary-600"
+            >
+              리허설 하러 가기
+            </button>
+          </div>
+        </div>
+        <BottomNav />
+      </>
+    );
+  }
 
   return (
     <>
@@ -13,7 +77,7 @@ export default function Passport() {
               연금 패스포트
             </h1>
             <p className="text-sm text-foreground-500">
-              성실한 개척자형
+              {passport.type.displayName}
             </p>
           </div>
 
@@ -56,15 +120,32 @@ export default function Passport() {
               <div className="px-6 pb-4 grid grid-cols-1 gap-3">
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-xs text-foreground-500 mb-1">월 납입액 유지 가능액</p>
-                  <p className="text-lg font-bold text-foreground-950">12만원</p>
+                  <p className="text-lg font-bold text-foreground-950">
+                    {formatWon(passport.sustainableMonthlyContribution)}
+                  </p>
                 </div>
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-xs text-foreground-500 mb-1">가장 큰 흐름 위험</p>
-                  <p className="text-base font-bold text-accent-600">주택 구매</p>
+                  <p className="text-base font-bold text-accent-600">
+                    {passport.biggestInterruptionRisk.displayName}
+                  </p>
                 </div>
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-xs text-foreground-500 mb-1">시장 위험도</p>
-                  <p className="text-base font-bold text-primary-600">중간</p>
+                  <p className="text-base font-bold text-primary-600">
+                    {passport.marketRiskLevel.displayName}
+                  </p>
+                </div>
+              </div>
+
+              <div className="px-6 pb-6">
+                <div className="rounded-xl bg-primary-50 p-4">
+                  <p className="mb-1 text-sm font-bold text-primary-700">
+                    {passport.type.displayName}
+                  </p>
+                  <p className="text-sm leading-relaxed text-foreground-700">
+                    {passport.typeDescription}
+                  </p>
                 </div>
               </div>
 
@@ -75,7 +156,7 @@ export default function Passport() {
                 </h3>
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-sm text-foreground-700 leading-relaxed mb-3">
-                    6가지 상황 이벤트에서 꾸준히 납입을 유지하는 경향. 시장 하락 시 오히려 납입을 늘리는 모습이 인상적이야
+                    {passport.summary}
                   </p>
                   <button
                     type="button"
@@ -90,10 +171,38 @@ export default function Passport() {
           )}
 
           {activeTab === 'detail' && (
-            <div className="px-6 pb-6 animate-fade-in">
-              <p className="text-sm text-foreground-500 text-center py-10">
-                세부 분석 데이터를 준비 중이에요
-              </p>
+            <div className="px-6 pb-6 animate-fade-in space-y-4">
+              <div className="rounded-xl bg-background-100 p-4">
+                <p className="mb-2 text-sm font-bold text-foreground-950">판단 이유</p>
+                <p className="text-sm leading-relaxed text-foreground-700">
+                  {passport.judgmentReason}
+                </p>
+              </div>
+
+              {passport.detailedAnalysis
+                .slice()
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map((detail) => (
+                  <div
+                    key={`${detail.scenario.code}-${detail.selectedOptionCode}`}
+                    className="rounded-xl border border-background-200 bg-background-50 p-4"
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-sm font-bold text-foreground-950">
+                        {detail.scenario.displayName}
+                      </p>
+                      <span className="shrink-0 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-600">
+                        {detail.selectedOptionCode}
+                      </span>
+                    </div>
+                    <p className="mb-2 text-sm font-medium text-foreground-800">
+                      {detail.behaviorSummary}
+                    </p>
+                    <p className="text-sm leading-relaxed text-foreground-600">
+                      {detail.interpretation}
+                    </p>
+                  </div>
+                ))}
             </div>
           )}
         </div>
