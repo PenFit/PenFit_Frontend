@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { createPensionPlan } from '../../../apis/plan';
+import { getMyPensionPassport } from '../../../apis/passport';
+import { getRehearsalProgress } from '../../../apis/simulation';
 
 interface CheckItem {
   label: string;
@@ -12,45 +16,135 @@ const initialItems: CheckItem[] = [
   { label: '유지 가능한 연금계획 생성 중', status: 'pending' },
 ];
 
+const FAILED_STATUS_CODES = new Set([
+  'FAILED',
+  'FAIL',
+  'ERROR',
+  'ANALYSIS_FAILED',
+]);
+
+const MAX_POLL_COUNT = 40;
+const POLL_INTERVAL_MS = 3000;
+
+function getStoredRehearsalId() {
+  const storedRehearsal = sessionStorage.getItem('rehearsalStart');
+
+  if (!storedRehearsal) {
+    return null;
+  }
+
+  try {
+    const rehearsal = JSON.parse(storedRehearsal) as { rehearsalId?: number };
+
+    return rehearsal.rehearsalId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Loading() {
   const navigate = useNavigate();
 
   const [items, setItems] = useState<CheckItem[]>(initialItems);
+  const [message, setMessage] = useState('당신의 연금 성향을 분석하고 있어요');
 
   useEffect(() => {
-    const timers: number[] = [];
+    const rehearsalId = getStoredRehearsalId();
+    let isMounted = true;
+    let pollCount = 0;
+    let pollTimer: number | undefined;
 
-    timers.push(window.setTimeout(() => {
-      setItems((prev) => [
-        { ...prev[0], status: 'done' },
-        { ...prev[1], status: 'loading' },
-        prev[2],
-      ]);
-    }, 1800));
+    if (!rehearsalId) {
+      navigate('/result-preview', { replace: true });
+      return undefined;
+    }
 
-    timers.push(window.setTimeout(() => {
-      setItems((prev) => [
-        prev[0],
-        { ...prev[1], status: 'done' },
-        { ...prev[2], status: 'loading' },
-      ]);
-    }, 4200));
+    const pollAnalysis = async () => {
+      pollCount += 1;
 
-    timers.push(window.setTimeout(() => {
-      setItems((prev) => [
-        prev[0],
-        prev[1],
-        { ...prev[2], status: 'done' },
-      ]);
-    }, 7000));
+      try {
+        const progress = await getRehearsalProgress(rehearsalId);
 
-    const navTimer = window.setTimeout(() => {
-      navigate('/status/success');
-    }, 9500);
+        sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(progress));
+        console.log('리허설 분석 상태 조회 성공', progress);
+
+        if (FAILED_STATUS_CODES.has(progress.status.code)) {
+          navigate('/status/error', { replace: true });
+          return;
+        }
+
+        setItems([
+          { label: '납입 행동 분석 중', status: 'done' },
+          { label: '시장 대응 성향 분석 중', status: 'loading' },
+          { label: '유지 가능한 연금계획 생성 중', status: 'pending' },
+        ]);
+
+        try {
+          const passport = await getMyPensionPassport();
+
+          sessionStorage.setItem('pensionPassport', JSON.stringify(passport));
+          setItems([
+            { label: '납입 행동 분석 중', status: 'done' },
+            { label: '시장 대응 성향 분석 중', status: 'done' },
+            { label: '유지 가능한 연금계획 생성 중', status: 'loading' },
+          ]);
+          setMessage('분석 결과를 바탕으로 연금계획을 만들고 있어요');
+
+          const plan = await createPensionPlan();
+
+          sessionStorage.setItem('pensionPlanResult', JSON.stringify(plan));
+          console.log('맞춤 연금 계획 생성 성공', plan);
+
+          if (!isMounted) {
+            return;
+          }
+
+          setItems([
+            { label: '납입 행동 분석 중', status: 'done' },
+            { label: '시장 대응 성향 분석 중', status: 'done' },
+            { label: '유지 가능한 연금계획 생성 중', status: 'done' },
+          ]);
+
+          navigate('/plan-result', { replace: true });
+          return;
+        } catch (error) {
+          if (isAxiosError(error) && error.response?.status === 404) {
+            if (pollCount < MAX_POLL_COUNT) {
+              pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
+              return;
+            }
+          }
+
+          if (isAxiosError(error)) {
+            console.error('패스포트 조회 또는 연금 계획 생성 실패 응답', error.response?.data);
+
+            if (error.response?.data?.code === 'PN4221') {
+              navigate('/status/empty', { replace: true });
+              return;
+            }
+          }
+
+          console.error('패스포트 조회 또는 연금 계획 생성에 실패했어요.', error);
+          navigate('/status/error', { replace: true });
+          return;
+        }
+      } catch (error) {
+        if (isAxiosError(error)) {
+          console.error('리허설 분석 상태 조회 실패 응답', error.response?.data);
+        }
+        console.error('리허설 분석 상태 조회에 실패했어요.', error);
+        navigate('/status/error', { replace: true });
+      }
+    };
+
+    pollAnalysis();
 
     return () => {
-      timers.forEach((id) => window.clearTimeout(id));
-      window.clearTimeout(navTimer);
+      isMounted = false;
+
+      if (pollTimer) {
+        window.clearTimeout(pollTimer);
+      }
     };
   }, [navigate]);
 
@@ -65,7 +159,7 @@ export default function Loading() {
             <p className="text-sm text-foreground-500 leading-relaxed animate-fade-in">
               방금 선택한 행동을 바탕으로
               <br />
-              당신의 연금 성향을 분석하고 있어요
+              {message}
             </p>
           </div>
 
@@ -112,7 +206,7 @@ export default function Loading() {
 
           {/* 푸터 힌트 */}
           <p className="text-xs text-foreground-400 text-center leading-relaxed animate-fade-in">
-            보통 10초 이내에 완료돼요.
+            분석이 끝날 때까지 잠시만 기다려주세요.
             <br />
             완료되면 자동으로 리포트 페이지로 넘어갑니다.
           </p>
