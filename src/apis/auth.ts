@@ -1,4 +1,5 @@
 import apiClient from "./client";
+import { clearAccessToken, setAccessToken } from "../utils/authToken";
 
 // 카카오 로그인 API 응답에서 실제로 사용하는 인증 데이터 구조
 interface KakaoLoginResponse {
@@ -32,9 +33,9 @@ export async function logout() {
   return response.data;
 }
 
-// 로그인 성공 후 앱에서 필요한 인증 정보를 localStorage에 저장
+// 로그인 성공 후 accessToken은 메모리에만 두고, 화면 표시에 필요한 정보만 저장
 export function saveAuthSession(authData: KakaoLoginResponse["data"]) {
-  localStorage.setItem("accessToken", authData.accessToken);
+  setAccessToken(authData.accessToken);
   localStorage.setItem("userId", String(authData.userId));
   localStorage.setItem("nickname", authData.nickname);
   localStorage.setItem("newUser", String(authData.newUser));
@@ -42,7 +43,7 @@ export function saveAuthSession(authData: KakaoLoginResponse["data"]) {
 
 // 브라우저에 저장된 로그인 정보를 제거
 export function clearAuthSession() {
-  localStorage.removeItem("accessToken");
+  clearAccessToken();
   localStorage.removeItem("userId");
   localStorage.removeItem("nickname");
   localStorage.removeItem("newUser");

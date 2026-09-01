@@ -3,6 +3,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from "axios";
+import { clearAccessToken, getAccessToken, setAccessToken } from "../utils/authToken";
 
 interface ReissueResponse {
   code: string;
@@ -30,14 +31,35 @@ const reissueClient = axios.create({
   withCredentials: true,
 });
 
+let reissuePromise: Promise<string> | null = null;
+
 // 로그인/재발급 API는 401이 나도 다시 재발급을 시도하지 않음
 function isAuthEndpoint(url?: string) {
   return url === "/api/v1/auth/kakao/login" || url === "/api/v1/auth/reissue";
 }
 
-// 저장된 accessToken이 있으면 모든 요청에 Authorization 헤더로 붙임
+export async function reissueAccessToken() {
+  if (!reissuePromise) {
+    reissuePromise = reissueClient
+      .post<ReissueResponse>("/api/v1/auth/reissue")
+      .then((response) => {
+        const newAccessToken = response.data.data.accessToken;
+
+        setAccessToken(newAccessToken);
+
+        return newAccessToken;
+      })
+      .finally(() => {
+        reissuePromise = null;
+      });
+  }
+
+  return reissuePromise;
+}
+
+// 메모리에 보관 중인 accessToken이 있으면 모든 요청에 Authorization 헤더로 붙임
 apiClient.interceptors.request.use((config) => {
-  const accessToken = localStorage.getItem("accessToken");
+  const accessToken = getAccessToken();
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
@@ -64,17 +86,14 @@ apiClient.interceptors.response.use(
 
     try {
       // 401 응답을 받으면 refreshToken 쿠키로 새 accessToken을 발급받음
-      const response = await reissueClient.post<ReissueResponse>("/api/v1/auth/reissue");
-      const newAccessToken = response.data.data.accessToken;
-
-      localStorage.setItem("accessToken", newAccessToken);
+      const newAccessToken = await reissueAccessToken();
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
       // 새 accessToken으로 실패했던 원래 요청을 한 번 다시 보냄
       return apiClient(originalRequest as AxiosRequestConfig);
     } catch (reissueError) {
       // 재발급도 실패하면 저장된 로그인 정보를 정리
-      localStorage.removeItem("accessToken");
+      clearAccessToken();
       localStorage.removeItem("userId");
       localStorage.removeItem("nickname");
       localStorage.removeItem("newUser");
