@@ -25,6 +25,7 @@ export default function Passport() {
   const errorMessage = isAxiosError(error)
     ? error.response?.data?.message
     : undefined;
+  const hasNoSustainableContribution = passport?.sustainableMonthlyContribution === 0;
 
   if (isLoading) {
     return (
@@ -120,9 +121,15 @@ export default function Passport() {
               <div className="px-6 pb-4 grid grid-cols-1 gap-3">
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-xs text-foreground-500 mb-1">월 납입액 유지 가능액</p>
-                  <p className="text-lg font-bold text-foreground-950">
-                    {formatWon(passport.sustainableMonthlyContribution)}
-                  </p>
+                  {hasNoSustainableContribution ? (
+                    <p className="text-sm font-semibold leading-relaxed text-accent-600">
+                      지금은 연금 납입보다 비상금과 현금 흐름 확보가 먼저예요
+                    </p>
+                  ) : (
+                    <p className="text-lg font-bold text-foreground-950">
+                      {formatWon(passport.sustainableMonthlyContribution)}
+                    </p>
+                  )}
                 </div>
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-xs text-foreground-500 mb-1">가장 큰 흐름 위험</p>

@@ -83,6 +83,22 @@ export default function Loading() {
           const passport = await getMyPensionPassport();
 
           sessionStorage.setItem('pensionPassport', JSON.stringify(passport));
+
+          if (passport.sustainableMonthlyContribution === 0) {
+            if (!isMounted) {
+              return;
+            }
+
+            setItems([
+              { label: '납입 행동 분석 중', status: 'done' },
+              { label: '시장 대응 성향 분석 중', status: 'done' },
+              { label: '유지 가능한 연금계획 생성 중', status: 'done' },
+            ]);
+
+            navigate('/passport', { replace: true });
+            return;
+          }
+
           setItems([
             { label: '납입 행동 분석 중', status: 'done' },
             { label: '시장 대응 성향 분석 중', status: 'done' },
