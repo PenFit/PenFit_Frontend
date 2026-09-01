@@ -70,13 +70,12 @@ export default function Mission() {
     try {
       await updateMyEmail(nextEmail);
       const updatedUser = await updateEmailConsent(true);
-      const analysis = await createSpendingAnalysis();
+      await createSpendingAnalysis();
 
       setEmail(updatedUser.email);
       setAgreed(true);
       queryClient.invalidateQueries({ queryKey: ['currentBehaviorMission'] });
       queryClient.invalidateQueries({ queryKey: ['spendingAnalysis'] });
-      console.log('이메일 수신 동의 및 소비 분석 생성 성공', { updatedUser, analysis });
       navigate('/mission/analysis');
     } catch (error) {
       if (isAxiosError(error)) {

@@ -44,7 +44,6 @@ export default function MissionWeekly() {
       const startedMission = await startBehaviorMission(mission.missionId);
 
       queryClient.setQueryData(['currentBehaviorMission'], startedMission);
-      console.log('행동 미션 시작 성공', startedMission);
     } catch (error) {
       if (isAxiosError(error)) {
         console.error('행동 미션 시작 실패 응답', error.response?.data);
@@ -61,10 +60,8 @@ export default function MissionWeekly() {
     try {
       const completedMission = await completeBehaviorMission(mission.missionId);
 
-      sessionStorage.setItem('completedBehaviorMission', JSON.stringify(completedMission));
       queryClient.setQueryData(['currentBehaviorMission'], completedMission);
       queryClient.invalidateQueries({ queryKey: ['behaviorMissionCompletions'] });
-      console.log('행동 미션 완료 성공', completedMission);
       navigate('/mission/complete');
     } catch (error) {
       if (isAxiosError(error)) {

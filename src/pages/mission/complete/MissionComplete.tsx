@@ -1,9 +1,7 @@
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   getBehaviorMissionCompletions,
-  type BehaviorMission,
   type BehaviorMissionCompletion,
 } from '../../../apis/mission';
 import BottomNav from '../../../components/BottomNav';
@@ -12,36 +10,19 @@ function formatWon(amount: number) {
   return `${amount.toLocaleString('ko-KR')}원`;
 }
 
-function getStoredCompletedMission() {
-  const storedMission = sessionStorage.getItem('completedBehaviorMission');
-
-  if (!storedMission) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(storedMission) as BehaviorMission;
-  } catch {
-    return null;
-  }
-}
-
 export default function MissionComplete() {
   const navigate = useNavigate();
-  const storedMission = useMemo(() => getStoredCompletedMission(), []);
   const { data: completions } = useQuery({
     queryKey: ['behaviorMissionCompletions'],
     queryFn: () => getBehaviorMissionCompletions(),
-    enabled: !storedMission,
     retry: false,
   });
 
   const latestCompletion: BehaviorMissionCompletion | null =
     completions?.completions[0] ?? null;
-  const title = storedMission?.title ?? latestCompletion?.title ?? '미션 완료!';
-  const targetAmount = storedMission?.targetAmount ?? latestCompletion?.targetAmount ?? 0;
-  const pensionImpactAmount =
-    storedMission?.pensionImpactAmount ?? latestCompletion?.pensionImpactAmount ?? 0;
+  const title = latestCompletion?.title ?? '미션 완료!';
+  const targetAmount = latestCompletion?.targetAmount ?? 0;
+  const pensionImpactAmount = latestCompletion?.pensionImpactAmount ?? 0;
   const monthlySavedAmount = targetAmount * 4;
 
   return (
