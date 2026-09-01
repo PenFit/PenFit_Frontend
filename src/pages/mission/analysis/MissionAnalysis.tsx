@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { isAxiosError } from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { getMySpendingAnalysis } from '../../../apis/mission';
 import BottomNav from '../../../components/BottomNav';
@@ -15,7 +14,6 @@ export default function MissionAnalysis() {
     data: spendingAnalysis,
     isLoading,
     isError,
-    error,
   } = useQuery({
     queryKey: ['spendingAnalysis'],
     queryFn: getMySpendingAnalysis,
@@ -40,10 +38,6 @@ export default function MissionAnalysis() {
   }
 
   if (isError || !spendingAnalysis) {
-    const errorMessage = isAxiosError(error)
-      ? error.response?.data?.message
-      : undefined;
-
     return (
       <>
         <div className="flex-1 overflow-y-auto pb-24 px-6 pt-6">
@@ -53,7 +47,7 @@ export default function MissionAnalysis() {
             </div>
             <h1 className="mb-2 text-xl font-bold text-foreground-950">분석 결과가 없어요</h1>
             <p className="mb-6 text-sm leading-relaxed text-foreground-500">
-              {errorMessage ?? '미션 홈에서 소비 분석을 먼저 받아주세요.'}
+              미션 홈에서 소비 분석을 먼저 받아주세요.
             </p>
             <Button className="py-3" onClick={() => navigate('/mission')}>
               미션 홈으로 가기

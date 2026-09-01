@@ -30,7 +30,6 @@ export default function MissionWeekly() {
     data: mission,
     isLoading,
     isError,
-    error,
   } = useQuery({
     queryKey: ['currentBehaviorMission'],
     queryFn: getCurrentBehaviorMission,
@@ -96,10 +95,6 @@ export default function MissionWeekly() {
   }
 
   if (isError || !mission) {
-    const errorMessage = isAxiosError(error)
-      ? error.response?.data?.message
-      : undefined;
-
     return (
       <>
         <div className="flex-1 overflow-y-auto pb-24 px-6 pt-6">
@@ -109,7 +104,7 @@ export default function MissionWeekly() {
             </div>
             <h1 className="mb-2 text-xl font-bold text-foreground-950">진행할 미션이 없어요</h1>
             <p className="mb-6 text-sm leading-relaxed text-foreground-500">
-              {errorMessage ?? '소비 분석을 먼저 받고 행동 미션을 확인해주세요.'}
+              소비 분석을 먼저 받고 행동 미션을 확인해주세요.
             </p>
             <Button className="py-3" onClick={() => navigate('/mission')}>
               미션 홈으로 가기
