@@ -42,6 +42,7 @@ export default function MissionComplete() {
   const targetAmount = storedMission?.targetAmount ?? latestCompletion?.targetAmount ?? 0;
   const pensionImpactAmount =
     storedMission?.pensionImpactAmount ?? latestCompletion?.pensionImpactAmount ?? 0;
+  const monthlySavedAmount = targetAmount * 4;
 
   return (
     <>
@@ -57,27 +58,30 @@ export default function MissionComplete() {
           {title}
         </p>
 
-        <div className="text-center mb-8 animate-fade-in">
-          <p className="text-xs text-foreground-500 mb-1">
-            확보된 금액
-          </p>
-          <p className="text-4xl font-bold text-primary-500">
-            {formatWon(targetAmount)}
-          </p>
-        </div>
+	        <div className="text-center mb-8 animate-fade-in">
+	          <p className="text-xs text-foreground-500 mb-1">
+	            이번 주 아낀 금액
+	          </p>
+	          <p className="text-4xl font-bold text-primary-500">
+	            {formatWon(targetAmount)}
+	          </p>
+	          <p className="mt-3 text-sm leading-relaxed text-foreground-600">
+	            매주 이만큼 아끼면 한 달에 약 {formatWon(monthlySavedAmount)}을 확보할 수 있어요
+	          </p>
+	        </div>
 
         <div className="w-full bg-primary-50 rounded-xl p-5 mb-10 animate-fade-in">
           <p className="text-sm font-semibold text-primary-800 text-center mb-2">
             연금계획에 미치는 영향
           </p>
-          <p className="text-sm text-foreground-700 text-center leading-relaxed">
-            목표 금액을 연금계획에 반영하면
-          </p>
-          <div className="mt-3 text-center">
-            <span className="text-lg font-bold text-primary-600">
-              예상 연금자산이 약 {formatWon(pensionImpactAmount)} 늘어나요
-            </span>
-          </div>
+	          <p className="text-sm text-foreground-700 text-center leading-relaxed">
+	            이번 주 절약한 금액을 30년간 매월 추가 납입하면
+	          </p>
+	          <div className="mt-3 text-center">
+	            <span className="text-lg font-bold text-primary-600">
+	              예상 연금자산이 약 {formatWon(pensionImpactAmount)} 늘어날 수 있어요
+	            </span>
+	          </div>
         </div>
 
         <button
