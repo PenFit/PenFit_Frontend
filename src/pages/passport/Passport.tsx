@@ -143,9 +143,9 @@ export default function Passport() {
                   <p className="mb-1 text-sm font-bold text-primary-700">
                     {passport.type.displayName}
                   </p>
-                  <p className="text-sm leading-relaxed text-foreground-700">
-                    {passport.typeDescription}
-                  </p>
+	                  <p className="text-sm leading-relaxed text-foreground-700">
+	                    {passport.typeSummary}
+	                  </p>
                 </div>
               </div>
 
@@ -179,31 +179,12 @@ export default function Passport() {
                 </p>
               </div>
 
-              {passport.detailedAnalysis
-                .slice()
-                .sort((a, b) => a.displayOrder - b.displayOrder)
-                .map((detail) => (
-                  <div
-                    key={`${detail.scenario.code}-${detail.selectedOptionCode}`}
-                    className="rounded-xl border border-background-200 bg-background-50 p-4"
-                  >
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-sm font-bold text-foreground-950">
-                        {detail.scenario.displayName}
-                      </p>
-                      <span className="shrink-0 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-600">
-                        {detail.selectedOptionCode}
-                      </span>
-                    </div>
-                    <p className="mb-2 text-sm font-medium text-foreground-800">
-                      {detail.behaviorSummary}
-                    </p>
-                    <p className="text-sm leading-relaxed text-foreground-600">
-                      {detail.interpretation}
-                    </p>
-                  </div>
-                ))}
-            </div>
+	              <div className="rounded-xl border border-background-200 bg-background-50 p-4">
+	                <p className="whitespace-pre-line text-sm leading-relaxed text-foreground-600">
+	                  {passport.detailedAnalysisReport}
+	                </p>
+	              </div>
+	            </div>
           )}
         </div>
 

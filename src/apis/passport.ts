@@ -5,24 +5,16 @@ export interface CodeDisplay {
   displayName: string;
 }
 
-export interface PensionPassportDetail {
-  scenario: CodeDisplay;
-  selectedOptionCode: string;
-  displayOrder: number;
-  behaviorSummary: string;
-  interpretation: string;
-}
-
 export interface PensionPassport {
   passportId: number;
   type: CodeDisplay;
-  typeDescription: string;
+  typeSummary: string;
   sustainableMonthlyContribution: number;
   biggestInterruptionRisk: CodeDisplay;
   marketRiskLevel: CodeDisplay;
   summary: string;
   judgmentReason: string;
-  detailedAnalysis: PensionPassportDetail[];
+  detailedAnalysisReport: string;
   createdAt: string;
 }
 
