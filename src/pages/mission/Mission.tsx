@@ -1,19 +1,48 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isAxiosError } from 'axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMyInformation, updateEmailConsent, updateMyEmail } from '../../apis/user';
+import {
+  createSpendingAnalysis,
+  getBehaviorMissionCompletions,
+  getCurrentBehaviorMission,
+} from '../../apis/mission';
 import Button from '../../components/Button';
 import BottomNav from '../../components/BottomNav';
-import { emailReportItems, weeklyMissions } from '../../mocks/missionData';
+import { emailReportItems } from '../../mocks/missionData';
+
+function formatWon(amount: number) {
+  return `${amount.toLocaleString('ko-KR')}원`;
+}
 
 export default function Mission() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [agreed, setAgreed] = useState(false);
   const [emailConsentChecked, setEmailConsentChecked] = useState(false);
   const [email, setEmail] = useState('');
   const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
   const [showEmailRequiredAlert, setShowEmailRequiredAlert] = useState(false);
 
-  const hasMissions = weeklyMissions.length > 0;
+  const {
+    data: currentMission,
+    isLoading: isMissionLoading,
+  } = useQuery({
+    queryKey: ['currentBehaviorMission'],
+    queryFn: getCurrentBehaviorMission,
+    enabled: agreed,
+    retry: false,
+  });
+
+  const {
+    data: completions,
+  } = useQuery({
+    queryKey: ['behaviorMissionCompletions'],
+    queryFn: () => getBehaviorMissionCompletions(),
+    enabled: agreed,
+    retry: false,
+  });
 
   useEffect(() => {
     const fetchMyInformation = async () => {
@@ -41,10 +70,18 @@ export default function Mission() {
     try {
       await updateMyEmail(nextEmail);
       const updatedUser = await updateEmailConsent(true);
+      const analysis = await createSpendingAnalysis();
+
       setEmail(updatedUser.email);
       setAgreed(true);
-      console.log('이메일 수신 동의 성공', updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['currentBehaviorMission'] });
+      queryClient.invalidateQueries({ queryKey: ['spendingAnalysis'] });
+      console.log('이메일 수신 동의 및 소비 분석 생성 성공', { updatedUser, analysis });
+      navigate('/mission/analysis');
     } catch (error) {
+      if (isAxiosError(error)) {
+        console.error('미션 분석 생성 실패 응답', error.response?.data);
+      }
       console.error('이메일 수신 동의에 실패했어요.', error);
     } finally {
       setIsSubmittingConsent(false);
@@ -191,7 +228,7 @@ export default function Mission() {
                     AI 소비패턴 분석
                   </span>
                   <h3 className="text-base font-bold text-foreground-950 mt-1">
-                    소비 패턴을 찾았어요
+                    {currentMission ? '소비 패턴을 찾았어요' : '소비 분석을 준비 중이에요'}
                   </h3>
                 </div>
                 <div className="w-6 h-6 flex items-center justify-center shrink-0 mt-1">
@@ -199,7 +236,9 @@ export default function Mission() {
                 </div>
               </div>
               <p className="text-sm text-foreground-600 mt-2">
-                AI가 이번 달 소비 내역을 분석했어요. 절약할 수 있는 부분을 찾아봤어요.
+                {currentMission
+                  ? `${currentMission.topCategory.displayName} 지출에서 줄일 수 있는 부분을 찾아봤어요.`
+                  : '분석 결과가 만들어지면 절약할 수 있는 부분을 확인할 수 있어요.'}
               </p>
               <p className="text-sm font-semibold text-primary-500 mt-1.5 group-hover:text-primary-600 transition-colors flex items-center gap-1">
                 분석 결과 보기
@@ -209,7 +248,16 @@ export default function Mission() {
           </div>
 
           {/* 이번 주 미션 */}
-          {hasMissions && (
+          {isMissionLoading && (
+            <div className="px-6 pb-4">
+              <div className="flex items-center justify-center rounded-xl bg-background-100 p-8">
+                <i className="ri-loader-4-line mr-2 animate-spin text-primary-500" />
+                <span className="text-sm text-foreground-500">미션을 불러오는 중...</span>
+              </div>
+            </div>
+          )}
+
+          {!isMissionLoading && currentMission && (
             <div className="px-6 pb-4">
               <div className="border-2 border-accent-400 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-3">
@@ -218,20 +266,28 @@ export default function Mission() {
                   </span>
                 </div>
                 <h3 className="text-lg font-bold text-foreground-950 mb-2">
-                  {weeklyMissions[0].title}
+                  {currentMission.title}
                 </h3>
                 <p className="text-sm text-foreground-600 mb-4">
-                  {weeklyMissions[0].goal}
+                  {currentMission.description}
                 </p>
 
                 <div className="grid grid-cols-3 gap-2 mb-4">
-                  {weeklyMissions[0].metrics.map((metric) => (
-                    <div key={metric.label} className="bg-background-100 rounded-lg p-2.5 text-center">
-                      <p className="text-xs text-foreground-400 mb-1">{metric.label}</p>
-                      <p className="text-base font-bold text-foreground-950">{metric.value}</p>
-                      <p className="text-[10px] text-foreground-400">{metric.desc}</p>
-                    </div>
-                  ))}
+                  <div className="bg-background-100 rounded-lg p-2.5 text-center">
+                    <p className="text-xs text-foreground-400 mb-1">{currentMission.topCategory.displayName}</p>
+                    <p className="text-base font-bold text-foreground-950">{currentMission.topCategoryRatio}%</p>
+                    <p className="text-[10px] text-foreground-400">주요 지출</p>
+                  </div>
+                  <div className="bg-background-100 rounded-lg p-2.5 text-center">
+                    <p className="text-xs text-foreground-400 mb-1">목표</p>
+                    <p className="text-base font-bold text-foreground-950">{formatWon(currentMission.targetAmount)}</p>
+                    <p className="text-[10px] text-foreground-400">절약 금액</p>
+                  </div>
+                  <div className="bg-background-100 rounded-lg p-2.5 text-center">
+                    <p className="text-xs text-foreground-400 mb-1">마감</p>
+                    <p className="text-base font-bold text-foreground-950">D-{currentMission.daysLeft}</p>
+                    <p className="text-[10px] text-foreground-400">{currentMission.dueDate}까지</p>
+                  </div>
                 </div>
 
                 <button
@@ -245,31 +301,39 @@ export default function Mission() {
             </div>
           )}
 
-          {/* 다른 미션 */}
-          {weeklyMissions.length > 1 && (
+          {!isMissionLoading && !currentMission && (
+            <div className="px-6 pb-6">
+              <div className="rounded-xl bg-background-100 p-6 text-center">
+                <p className="mb-4 text-sm text-foreground-500">
+                  현재 진행 중인 미션이 없어요.
+                </p>
+                <Button className="py-3" onClick={() => navigate('/mission/analysis')}>
+                  분석 결과 보기
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {completions && completions.completedCount > 0 && (
             <div className="px-6 pb-6">
               <h3 className="text-sm font-semibold text-foreground-700 mb-3">
-                다른 미션 선택하기
+                올해 완료한 미션
               </h3>
-              <div className="space-y-3">
-                {weeklyMissions.slice(1).map((mission) => (
-                  <button
-                    key={mission.id}
-                    type="button"
-                    onClick={() => navigate('/mission/weekly')}
-                    className="w-full bg-background-100 rounded-xl p-4 text-left hover:bg-background-200 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-secondary-600 bg-secondary-100 px-2 py-0.5 rounded-full">
-                        {mission.subtitle}
-                      </span>
-                      <span className="text-xs text-foreground-400">{mission.deadline}</span>
-                    </div>
-                    <h4 className="text-sm font-semibold text-foreground-950 mt-1.5">
-                      {mission.title}
-                    </h4>
-                  </button>
-                ))}
+              <div className="rounded-xl bg-background-100 p-4">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-foreground-400">완료</p>
+                    <p className="text-base font-bold text-foreground-950">{completions.completedCount}개</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-foreground-400">절약</p>
+                    <p className="text-base font-bold text-primary-600">{formatWon(completions.totalSavedAmount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-foreground-400">연금 효과</p>
+                    <p className="text-base font-bold text-accent-600">{formatWon(completions.totalPensionImpactAmount)}</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}

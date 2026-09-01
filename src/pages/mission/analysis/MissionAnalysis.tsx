@@ -1,11 +1,69 @@
 import { useNavigate } from 'react-router-dom';
+import { isAxiosError } from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { getMySpendingAnalysis } from '../../../apis/mission';
 import BottomNav from '../../../components/BottomNav';
-import { spendingPattern } from '../../../mocks/missionData';
+import Button from '../../../components/Button';
+
+function formatWon(amount: number) {
+  return `${amount.toLocaleString('ko-KR')}원`;
+}
 
 export default function MissionAnalysis() {
   const navigate = useNavigate();
+  const {
+    data: spendingAnalysis,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['spendingAnalysis'],
+    queryFn: getMySpendingAnalysis,
+    retry: false,
+  });
 
-  const maxAmount = Math.max(...spendingPattern.categories.map((c) => c.amount));
+  const categories = spendingAnalysis?.categorySpending ?? [];
+  const maxAmount = Math.max(...categories.map((category) => category.amount), 1);
+
+  if (isLoading) {
+    return (
+      <>
+        <div className="flex-1 overflow-y-auto pb-24 px-6 pt-6">
+          <div className="flex h-full flex-col items-center justify-center">
+            <i className="ri-loader-4-line mb-3 flex h-8 w-8 animate-spin items-center justify-center text-2xl text-primary-500" />
+            <p className="text-sm text-foreground-500">소비 분석 결과를 불러오는 중...</p>
+          </div>
+        </div>
+        <BottomNav />
+      </>
+    );
+  }
+
+  if (isError || !spendingAnalysis) {
+    const errorMessage = isAxiosError(error)
+      ? error.response?.data?.message
+      : undefined;
+
+    return (
+      <>
+        <div className="flex-1 overflow-y-auto pb-24 px-6 pt-6">
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-background-100">
+              <i className="ri-sparkling-line text-2xl text-foreground-400" />
+            </div>
+            <h1 className="mb-2 text-xl font-bold text-foreground-950">분석 결과가 없어요</h1>
+            <p className="mb-6 text-sm leading-relaxed text-foreground-500">
+              {errorMessage ?? '미션 홈에서 소비 분석을 먼저 받아주세요.'}
+            </p>
+            <Button className="py-3" onClick={() => navigate('/mission')}>
+              미션 홈으로 가기
+            </Button>
+          </div>
+        </div>
+        <BottomNav />
+      </>
+    );
+  }
 
   return (
     <>
@@ -32,17 +90,17 @@ export default function MissionAnalysis() {
                 가장 큰 소비 영역
               </p>
               <p className="text-2xl font-bold text-foreground-950">
-                {spendingPattern.total}
+                {spendingAnalysis.topCategory.displayName}
               </p>
             </div>
             <div className="pb-1">
               <span className="text-sm font-semibold text-accent-600">
-                {spendingPattern.totalAmount}
+                {formatWon(spendingAnalysis.totalAmount)}
               </span>
             </div>
             <div className="pb-1 ml-auto">
               <span className="text-lg font-bold text-accent-500">
-                {spendingPattern.topPercentage}
+                {Math.round(categories[0]?.ratio ?? 0)}%
               </span>
             </div>
           </div>
@@ -53,17 +111,19 @@ export default function MissionAnalysis() {
               영역별 지출
             </h3>
             <div className="space-y-4">
-              {spendingPattern.categories.map((cat) => (
-                <div key={cat.name}>
+              {categories.map((cat, index) => (
+                <div key={cat.category.code}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm text-foreground-700">{cat.name}</span>
+                    <span className="text-sm text-foreground-700">{cat.category.displayName}</span>
                     <span className="text-sm font-semibold text-foreground-950">
-                      {(cat.amount / 10000).toFixed(0)}만원
+                      {formatWon(cat.amount)}
                     </span>
                   </div>
                   <div className="w-full h-3 bg-background-200 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-1000 ${cat.color}`}
+                      className={`h-full rounded-full transition-all duration-1000 ${
+                        index === 0 ? 'bg-accent-500' : index === 1 ? 'bg-accent-400' : 'bg-secondary-300'
+                      }`}
                       style={{ width: `${(cat.amount / maxAmount) * 100}%` }}
                     />
                   </div>
@@ -78,7 +138,7 @@ export default function MissionAnalysis() {
               핵심 소비 3개
             </h3>
             <div className="space-y-3">
-              {spendingPattern.keySpending.map((item, idx) => (
+              {spendingAnalysis.keyInsights.map((item, idx) => (
                 <div key={idx} className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-accent-100 flex items-center justify-center shrink-0 mt-0.5">
                     <span className="text-xs font-bold text-accent-600">{idx + 1}</span>
