@@ -12,11 +12,20 @@ export default function KakaoCallback() {
   const [errorMessage, setErrorMessage] = useState("");
   const requestedCodeRef = useRef<string | null>(null);
   const code = searchParams.get("code");
+  const state = searchParams.get("state");
 
   useEffect(() => {
     // 카카오 redirect URL에 code가 없으면 로그인 진행 불가
     if (!code) {
       setErrorMessage("카카오 인가 코드를 찾을 수 없어요.");
+      return;
+    }
+
+    const savedState = sessionStorage.getItem("kakao-oauth-state");
+
+    if (!state || !savedState || state !== savedState) {
+      sessionStorage.removeItem("kakao-oauth-state");
+      setErrorMessage("로그인 요청 정보를 확인할 수 없어요. 다시 시도해주세요.");
       return;
     }
 
@@ -40,15 +49,16 @@ export default function KakaoCallback() {
         // 백엔드에 code를 전달해 서비스 accessToken을 발급받음
         const authData = await loginWithKakaoCode(code);
         saveAuthSession(authData);
-        console.log("카카오 로그인 성공", authData);
+        sessionStorage.removeItem("kakao-oauth-state");
         navigate(authData.newUser ? "/step1" : "/home", { replace: true });
       } catch {
+        sessionStorage.removeItem("kakao-oauth-state");
         setErrorMessage("카카오 로그인에 실패했어요. 다시 시도해주세요.");
       }
     };
 
     requestLogin();
-  }, [code, navigate]);
+  }, [code, navigate, state]);
 
   // 로그인 실패 또는 code 누락 시 보여주는 오류 화면
   if (errorMessage) {

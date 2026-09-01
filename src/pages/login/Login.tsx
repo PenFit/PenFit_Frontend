@@ -18,10 +18,14 @@ export default function Login() {
     const kakaoRestApiKey = import.meta.env.VITE_KAKAO_REST_API;
     const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
     const kakaoAuthUrl = new URL("https://kauth.kakao.com/oauth/authorize");
+    const kakaoState = crypto.randomUUID();
+
+    sessionStorage.setItem("kakao-oauth-state", kakaoState);
 
     kakaoAuthUrl.searchParams.set("response_type", "code");
     kakaoAuthUrl.searchParams.set("client_id", kakaoRestApiKey);
     kakaoAuthUrl.searchParams.set("redirect_uri", redirectUri);
+    kakaoAuthUrl.searchParams.set("state", kakaoState);
 
     window.location.href = kakaoAuthUrl.toString();
   };
