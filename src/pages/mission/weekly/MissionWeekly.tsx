@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ function isCompletedStatus(code: string) {
 export default function MissionWeekly() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     data: mission,
     isLoading,
@@ -36,9 +38,11 @@ export default function MissionWeekly() {
   });
 
   const handleStart = async () => {
-    if (!mission) {
+    if (!mission || isSubmitting) {
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const startedMission = await startBehaviorMission(mission.missionId);
@@ -49,13 +53,17 @@ export default function MissionWeekly() {
         console.error('행동 미션 시작 실패 응답', error.response?.data);
       }
       console.error('행동 미션 시작에 실패했어요.', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleComplete = async () => {
-    if (!mission) {
+    if (!mission || isSubmitting) {
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const completedMission = await completeBehaviorMission(mission.missionId);
@@ -68,6 +76,8 @@ export default function MissionWeekly() {
         console.error('행동 미션 완료 실패 응답', error.response?.data);
       }
       console.error('행동 미션 완료에 실패했어요.', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -193,13 +203,18 @@ export default function MissionWeekly() {
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={completed ? () => navigate('/mission/complete') : started ? handleComplete : handleStart}
-            className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-3.5 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer"
-          >
-            {completed ? '완료 결과 보기' : started ? '미션 완료하기' : '미션 시작하기'}
-          </button>
+	          <button
+	            type="button"
+	            disabled={isSubmitting}
+	            onClick={completed ? () => navigate('/mission/complete') : started ? handleComplete : handleStart}
+	            className={`w-full rounded-xl py-3.5 text-sm font-semibold text-background-50 transition-colors whitespace-nowrap ${
+	              isSubmitting
+	                ? 'cursor-not-allowed bg-background-300'
+	                : 'cursor-pointer bg-primary-500 hover:bg-primary-600'
+	            }`}
+	          >
+	            {isSubmitting ? '처리 중' : completed ? '완료 결과 보기' : started ? '미션 완료하기' : '미션 시작하기'}
+	          </button>
         </div>
       </div>
 

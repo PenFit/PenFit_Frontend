@@ -16,6 +16,10 @@ function formatWon(amount: number) {
   return `${amount.toLocaleString('ko-KR')}원`;
 }
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function Mission() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -24,6 +28,13 @@ export default function Mission() {
   const [email, setEmail] = useState('');
   const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
   const [showEmailRequiredAlert, setShowEmailRequiredAlert] = useState(false);
+  const [emailErrorMessage, setEmailErrorMessage] = useState('');
+  const trimmedEmail = email.trim();
+  const emailFormatErrorMessage =
+    trimmedEmail && !isValidEmail(trimmedEmail) ? '올바른 이메일 주소를 입력해주세요.' : '';
+  const visibleEmailErrorMessage = emailErrorMessage || emailFormatErrorMessage;
+  const canSubmitConsent =
+    emailConsentChecked && isValidEmail(trimmedEmail) && !isSubmittingConsent;
 
   const {
     data: currentMission,
@@ -65,6 +76,11 @@ export default function Mission() {
       return;
     }
 
+    if (!isValidEmail(nextEmail)) {
+      setEmailErrorMessage('올바른 이메일 주소를 입력해주세요.');
+      return;
+    }
+
     setIsSubmittingConsent(true);
 
     try {
@@ -88,11 +104,19 @@ export default function Mission() {
   };
 
   const handleToggleEmailConsent = () => {
-    if (!email.trim()) {
+    const nextEmail = email.trim();
+
+    if (!nextEmail) {
       setShowEmailRequiredAlert(true);
       return;
     }
 
+    if (!isValidEmail(nextEmail)) {
+      setEmailErrorMessage('올바른 이메일 주소를 입력해주세요.');
+      return;
+    }
+
+    setEmailErrorMessage('');
     setEmailConsentChecked(!emailConsentChecked);
   };
 
@@ -139,15 +163,21 @@ export default function Mission() {
               </label>
               <div className="flex items-center gap-3 bg-background-100 rounded-xl px-4 py-3">
                 <i className="ri-mail-line text-foreground-400 text-sm w-4 h-4 flex items-center justify-center" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-transparent text-sm text-foreground-950 outline-none flex-1"
-                  placeholder="email@example.com"
-                />
-              </div>
-            </div>
+	                <input
+	                  type="email"
+	                  value={email}
+	                  onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailErrorMessage('');
+                    }}
+	                  className="bg-transparent text-sm text-foreground-950 outline-none flex-1"
+	                  placeholder="email@example.com"
+	                />
+	              </div>
+                {visibleEmailErrorMessage && (
+                  <p className="mt-2 text-xs text-accent-600">{visibleEmailErrorMessage}</p>
+                )}
+	            </div>
 
             {/* 동의 */}
             <div className="flex items-start gap-3 mb-8">
@@ -166,16 +196,16 @@ export default function Mission() {
             </div>
 
             {/* 제출 버튼 */}
-            <button
-              type="button"
-              disabled={!emailConsentChecked || !email.trim() || isSubmittingConsent}
-              onClick={handleReceiveMissionAnalysis}
-              className={`
-                w-full py-3.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer
-                ${emailConsentChecked && email.trim()
-                  ? 'bg-primary-500 hover:bg-primary-600 text-background-50'
-                  : 'bg-background-200 text-foreground-400 cursor-not-allowed'
-                }
+	            <button
+	              type="button"
+	              disabled={!canSubmitConsent}
+	              onClick={handleReceiveMissionAnalysis}
+	              className={`
+	                w-full py-3.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer
+                ${canSubmitConsent
+	                  ? 'bg-primary-500 hover:bg-primary-600 text-background-50'
+	                  : 'bg-background-200 text-foreground-400 cursor-not-allowed'
+	                }
               `}
             >
               {isSubmittingConsent ? '처리 중' : '미션 분석 받기'}
@@ -226,19 +256,19 @@ export default function Mission() {
                   <span className="text-xs font-medium text-accent-600 bg-accent-100 px-2 py-0.5 rounded-full">
                     AI 소비패턴 분석
                   </span>
-	                  <h3 className="text-base font-bold text-foreground-950 mt-1">
-	                    {currentMission ? '최근 7일 소비 패턴을 찾았어요' : '최근 7일 소비 분석을 준비 중이에요'}
-	                  </h3>
+                  <h3 className="text-base font-bold text-foreground-950 mt-1">
+                    {currentMission ? '최근 7일 소비 패턴을 찾았어요' : '최근 7일 소비 분석을 준비 중이에요'}
+                  </h3>
                 </div>
                 <div className="w-6 h-6 flex items-center justify-center shrink-0 mt-1">
                   <i className="ri-arrow-right-s-line text-foreground-400 text-xl group-hover:text-primary-500 transition-colors w-5 h-5 flex items-center justify-center" />
                 </div>
               </div>
               <p className="text-sm text-foreground-600 mt-2">
-	                {currentMission
-	                  ? `최근 7일 ${currentMission.topCategory.displayName} 지출에서 줄일 수 있는 부분을 찾아봤어요.`
-	                  : '최근 7일 분석 결과가 만들어지면 절약할 수 있는 부분을 확인할 수 있어요.'}
-	              </p>
+                {currentMission
+                  ? `최근 7일 ${currentMission.topCategory.displayName} 지출에서 줄일 수 있는 부분을 찾아봤어요.`
+                  : '최근 7일 분석 결과가 만들어지면 절약할 수 있는 부분을 확인할 수 있어요.'}
+              </p>
               <p className="text-sm font-semibold text-primary-500 mt-1.5 group-hover:text-primary-600 transition-colors flex items-center gap-1">
                 분석 결과 보기
                 <i className="ri-arrow-right-line text-xs w-3 h-3 flex items-center justify-center" />
