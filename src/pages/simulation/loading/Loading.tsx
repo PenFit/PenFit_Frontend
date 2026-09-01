@@ -66,7 +66,6 @@ export default function Loading() {
         const progress = await getRehearsalProgress(rehearsalId);
 
         sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(progress));
-        console.log('리허설 분석 상태 조회 성공', progress);
 
         if (FAILED_STATUS_CODES.has(progress.status.code)) {
           navigate('/status/error', { replace: true });
@@ -81,8 +80,6 @@ export default function Loading() {
 
         try {
           const passport = await getMyPensionPassport();
-
-          sessionStorage.setItem('pensionPassport', JSON.stringify(passport));
 
           if (passport.sustainableMonthlyContribution === 0) {
             if (!isMounted) {
@@ -109,7 +106,6 @@ export default function Loading() {
           const plan = await createPensionPlan();
 
           sessionStorage.setItem('pensionPlanResult', JSON.stringify(plan));
-          console.log('맞춤 연금 계획 생성 성공', plan);
 
           if (!isMounted) {
             return;
