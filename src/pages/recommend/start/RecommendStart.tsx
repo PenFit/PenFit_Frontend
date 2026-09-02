@@ -35,7 +35,6 @@ export default function RecommendStart() {
 
         saveProductRecommendations(existingRecommendations);
         setRecommendations(existingRecommendations);
-        console.log('맞춤 연금 상품 추천 조회 성공', existingRecommendations);
       } catch (error) {
         if (isAxiosError(error) && error.response?.status === 404) {
           try {
@@ -43,7 +42,6 @@ export default function RecommendStart() {
 
             saveProductRecommendations(nextRecommendations);
             setRecommendations(nextRecommendations);
-            console.log('맞춤 연금 상품 추천 생성 성공', nextRecommendations);
           } catch (createError) {
             if (isAxiosError(createError)) {
               console.error('맞춤 연금 상품 추천 생성 실패 응답', createError.response?.data);

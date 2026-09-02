@@ -14,6 +14,36 @@ export type RecommendationCardProduct = {
   reason: string;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isCodeDisplay(value: unknown) {
+  return (
+    isRecord(value) &&
+    typeof value.code === 'string' &&
+    typeof value.displayName === 'string'
+  );
+}
+
+function isValidProductId(productId: unknown) {
+  return typeof productId === 'number' && Number.isSafeInteger(productId) && productId > 0;
+}
+
+function isProductRecommendation(value: unknown): value is ProductRecommendation {
+  return (
+    isRecord(value) &&
+    typeof value.rank === 'number' &&
+    isValidProductId(value.productId) &&
+    isCodeDisplay(value.accountType) &&
+    typeof value.providerName === 'string' &&
+    typeof value.productName === 'string' &&
+    typeof value.summary === 'string' &&
+    isCodeDisplay(value.fitLevel) &&
+    typeof value.recommendationReason === 'string'
+  );
+}
+
 export function saveProductRecommendations(recommendations: ProductRecommendation[]) {
   sessionStorage.setItem(PRODUCT_RECOMMENDATIONS_KEY, JSON.stringify(recommendations));
 }
@@ -26,20 +56,32 @@ export function getStoredProductRecommendations() {
   }
 
   try {
-    return JSON.parse(storedRecommendations) as ProductRecommendation[];
+    const parsedRecommendations = JSON.parse(storedRecommendations);
+
+    return Array.isArray(parsedRecommendations)
+      ? parsedRecommendations.filter(isProductRecommendation)
+      : [];
   } catch {
     return [];
   }
 }
 
-export function saveSelectedProductRecommendation(productId: string) {
-  sessionStorage.setItem(SELECTED_RECOMMENDATION_KEY, productId);
+export function saveSelectedProductRecommendation(productId: string | number) {
+  const normalizedProductId = Number(productId);
+
+  if (!isValidProductId(normalizedProductId)) {
+    sessionStorage.removeItem(SELECTED_RECOMMENDATION_KEY);
+    return;
+  }
+
+  sessionStorage.setItem(SELECTED_RECOMMENDATION_KEY, String(normalizedProductId));
 }
 
 export function getSelectedProductRecommendationId() {
   const selectedProductId = sessionStorage.getItem(SELECTED_RECOMMENDATION_KEY);
+  const normalizedProductId = Number(selectedProductId);
 
-  return selectedProductId ? Number(selectedProductId) : null;
+  return isValidProductId(normalizedProductId) ? normalizedProductId : null;
 }
 
 export function getSelectedProductRecommendation() {

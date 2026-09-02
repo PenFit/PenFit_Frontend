@@ -24,9 +24,11 @@ export default function RecommendDetail() {
   });
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveErrorMessage, setSaveErrorMessage] = useState('');
 
   useEffect(() => {
     setSaved(product?.saved ?? false);
+    setSaveErrorMessage('');
   }, [product?.saved]);
 
   const updateSavedCache = (nextSaved: boolean) => {
@@ -43,22 +45,21 @@ export default function RecommendDetail() {
     }
 
     setIsSaving(true);
+    setSaveErrorMessage('');
 
     try {
       if (saved) {
-        const deleteResult = await deleteSavedProduct(product.productId);
+        await deleteSavedProduct(product.productId);
 
         setSaved(false);
         updateSavedCache(false);
-        console.log('담은 상품 취소 성공', deleteResult);
         return;
       }
 
-      const saveResult = await saveProduct(product.productId);
+      await saveProduct(product.productId);
 
       setSaved(true);
       updateSavedCache(true);
-      console.log('상품 담기 성공', saveResult);
     } catch (error) {
       if (isAxiosError(error)) {
         console.error(saved ? '담은 상품 취소 실패 응답' : '상품 담기 실패 응답', error.response?.data);
@@ -71,6 +72,11 @@ export default function RecommendDetail() {
       }
 
       console.error(saved ? '담은 상품 취소에 실패했어요.' : '상품 담기에 실패했어요.', error);
+      setSaveErrorMessage(
+        saved
+          ? '담기 취소를 처리하지 못했어요. 다시 시도해주세요.'
+          : '상품을 담지 못했어요. 다시 시도해주세요.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -243,6 +249,11 @@ export default function RecommendDetail() {
 
       {/* 하단 버튼 */}
       <div className="px-5 mt-6">
+        {saveErrorMessage && (
+          <p className="mb-3 text-center text-sm font-medium text-accent-600">
+            {saveErrorMessage}
+          </p>
+        )}
         <button
           type="button"
           onClick={handleSaveToggle}

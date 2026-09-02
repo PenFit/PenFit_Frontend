@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { deleteSavedProduct, getMySavedProducts } from '../../apis/recommend';
 import BottomNav from '../../components/BottomNav';
 import { saveSelectedProductRecommendation } from './recommendationStorage';
@@ -8,6 +9,7 @@ import { saveSelectedProductRecommendation } from './recommendationStorage';
 export default function RecommendMain() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState('');
   const {
     data: savedProducts = [],
     isLoading,
@@ -24,17 +26,19 @@ export default function RecommendMain() {
   };
 
   const handleDelete = async (productId: number) => {
+    setDeleteErrorMessage('');
+
     try {
-      const deleteResult = await deleteSavedProduct(productId);
+      await deleteSavedProduct(productId);
 
       queryClient.invalidateQueries({ queryKey: ['mySavedProducts'] });
       queryClient.invalidateQueries({ queryKey: ['pensionProductDetail', productId] });
-      console.log('담은 상품 취소 성공', deleteResult);
     } catch (error) {
       if (isAxiosError(error)) {
         console.error('담은 상품 취소 실패 응답', error.response?.data);
       }
       console.error('담은 상품 취소에 실패했어요.', error);
+      setDeleteErrorMessage('담은 상품을 취소하지 못했어요. 다시 시도해주세요.');
     }
   };
 
@@ -66,6 +70,14 @@ export default function RecommendMain() {
           </button>
         )}
       </div>
+
+      {deleteErrorMessage && (
+        <div className="px-5">
+          <p className="rounded-lg bg-accent-50 px-4 py-3 text-sm font-medium text-accent-700">
+            {deleteErrorMessage}
+          </p>
+        </div>
+      )}
 
       {/* 빈상태 or 리스트 */}
       {isLoading && (
