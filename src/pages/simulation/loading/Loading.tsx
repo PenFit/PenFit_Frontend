@@ -3,11 +3,8 @@ import { isAxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { createPensionPlan } from '../../../apis/plan';
 import { getMyPensionPassport } from '../../../apis/passport';
-import { getRehearsalProgress } from '../../../apis/simulation';
-import {
-  REHEARSAL_ANSWER_STATUS_STORAGE_KEY,
-  getStoredRehearsalId,
-} from '../../../utils/rehearsalStorage';
+import { getRehearsalProgress, retryRehearsalAnalysis } from '../../../apis/simulation';
+import { getStoredRehearsalId } from '../../../utils/rehearsalStorage';
 
 interface CheckItem {
   label: string;
@@ -30,12 +27,17 @@ const FAILED_STATUS_CODES = new Set([
 const MAX_POLL_COUNT = 40;
 const POLL_INTERVAL_MS = 3000;
 
+type LoadingErrorType = 'delayed' | 'failed' | null;
+
 export default function Loading() {
   const navigate = useNavigate();
   const hasRequestedPlanRef = useRef(false);
 
   const [items, setItems] = useState<CheckItem[]>(initialItems);
   const [message, setMessage] = useState('당신의 연금 성향을 분석하고 있어요');
+  const [errorType, setErrorType] = useState<LoadingErrorType>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     const rehearsalId = getStoredRehearsalId();
@@ -48,7 +50,8 @@ export default function Loading() {
       return undefined;
     }
 
-    sessionStorage.removeItem(REHEARSAL_ANSWER_STATUS_STORAGE_KEY);
+    setErrorType(null);
+    setMessage('당신의 연금 성향을 분석하고 있어요');
 
     const pollAnalysis = async () => {
       if (!isMounted) {
@@ -64,10 +67,9 @@ export default function Loading() {
           return;
         }
 
-        sessionStorage.setItem(REHEARSAL_ANSWER_STATUS_STORAGE_KEY, JSON.stringify(progress));
-
         if (FAILED_STATUS_CODES.has(progress.status.code)) {
-          navigate('/status/error', { replace: true });
+          setErrorType('failed');
+          setMessage(progress.failureMessage || '분석에 실패했어요. 다시 시도해주세요.');
           return;
         }
 
@@ -129,6 +131,10 @@ export default function Loading() {
               pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
               return;
             }
+
+            setErrorType('delayed');
+            setMessage('분석이 예상보다 오래 걸리고 있어요.');
+            return;
           }
 
           if (isAxiosError(error)) {
@@ -141,7 +147,8 @@ export default function Loading() {
           }
 
           console.error('패스포트 조회 또는 연금 계획 생성에 실패했어요.', error);
-          navigate('/status/error', { replace: true });
+          setErrorType('failed');
+          setMessage('분석 결과를 불러오지 못했어요. 다시 시도해주세요.');
           return;
         }
       } catch (error) {
@@ -153,7 +160,8 @@ export default function Loading() {
           console.error('리허설 분석 상태 조회 실패 응답', error.response?.data);
         }
         console.error('리허설 분석 상태 조회에 실패했어요.', error);
-        navigate('/status/error', { replace: true });
+        setErrorType('failed');
+        setMessage('분석 상태를 확인하지 못했어요. 다시 시도해주세요.');
       }
     };
 
@@ -166,7 +174,38 @@ export default function Loading() {
         window.clearTimeout(pollTimer);
       }
     };
-  }, [navigate]);
+  }, [navigate, retryKey]);
+
+  const handleRetry = async () => {
+    const rehearsalId = getStoredRehearsalId();
+
+    if (!rehearsalId || isRetrying) {
+      navigate('/result-preview', { replace: true });
+      return;
+    }
+
+    setIsRetrying(true);
+
+    try {
+      if (errorType === 'failed') {
+        await retryRehearsalAnalysis(rehearsalId);
+      }
+
+      hasRequestedPlanRef.current = false;
+      setItems(initialItems);
+      setErrorType(null);
+      setRetryKey((currentKey) => currentKey + 1);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        console.error('리허설 AI 분석 재시도 실패 응답', error.response?.data);
+      }
+      console.error('리허설 AI 분석 재시도에 실패했어요.', error);
+      setErrorType('failed');
+      setMessage('다시 시도하지 못했어요. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   return (
     <>
@@ -185,11 +224,15 @@ export default function Loading() {
 
           {/* 스피너 */}
           <div className="relative w-24 h-24 mb-12">
-            <div className="absolute inset-0 spinner-arc-1" />
-            <div className="absolute inset-0 spinner-arc-2" />
+            {!errorType && (
+              <>
+                <div className="absolute inset-0 spinner-arc-1" />
+                <div className="absolute inset-0 spinner-arc-2" />
+              </>
+            )}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center">
-                <i className="ri-shield-check-line text-primary-500 text-xl w-6 h-6 flex items-center justify-center" />
+                <i className={`${errorType ? 'ri-error-warning-line text-accent-500' : 'ri-shield-check-line text-primary-500'} text-xl w-6 h-6 flex items-center justify-center`} />
               </div>
             </div>
           </div>
@@ -224,12 +267,32 @@ export default function Loading() {
             ))}
           </div>
 
-          {/* 푸터 힌트 */}
-          <p className="text-xs text-foreground-400 text-center leading-relaxed animate-fade-in">
-            분석이 끝날 때까지 잠시만 기다려주세요.
-            <br />
-            완료되면 자동으로 리포트 페이지로 넘어갑니다.
-          </p>
+          {errorType ? (
+            <div className="w-full space-y-3">
+              <button
+                type="button"
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-4 rounded-lg transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isRetrying ? '다시 시도 중' : '다시 시도하기'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/result-preview', { replace: true })}
+                className="w-full bg-background-100 text-foreground-700 font-semibold py-4 rounded-lg transition-colors hover:bg-background-200 whitespace-nowrap"
+              >
+                이전 화면으로 돌아가기
+              </button>
+            </div>
+          ) : (
+            /* 푸터 힌트 */
+            <p className="text-xs text-foreground-400 text-center leading-relaxed animate-fade-in">
+              분석이 끝날 때까지 잠시만 기다려주세요.
+              <br />
+              완료되면 자동으로 리포트 페이지로 넘어갑니다.
+            </p>
+          )}
         </div>
     </>
   );
