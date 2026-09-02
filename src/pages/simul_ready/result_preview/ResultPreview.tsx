@@ -5,8 +5,8 @@ import { startRehearsal } from '../../../apis/simulation';
 import { getPensionSetup, type PensionSetup } from '../../../apis/setup';
 import ProgressBar from '../../../components/ProgressBar';
 import BarChart from '../../../components/BarChart';
+import { PREVIEW_STORAGE_KEY } from '../setupValidation';
 
-const PREVIEW_STORAGE_KEY = 'pensionSetupPreview';
 const REHEARSAL_STORAGE_KEY = 'rehearsalStart';
 
 function formatWon(value: number) {
@@ -55,6 +55,7 @@ export default function ResultPreview() {
   const [isLoading, setIsLoading] = useState(() => !sessionStorage.getItem(PREVIEW_STORAGE_KEY));
   const [isStartingRehearsal, setIsStartingRehearsal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [rehearsalErrorMessage, setRehearsalErrorMessage] = useState('');
 
   useEffect(() => {
     if (pensionSetup) {
@@ -95,17 +96,18 @@ export default function ResultPreview() {
     }
 
     setIsStartingRehearsal(true);
+    setRehearsalErrorMessage('');
 
     try {
       const rehearsal = await startRehearsal();
       sessionStorage.setItem(REHEARSAL_STORAGE_KEY, JSON.stringify(rehearsal));
-      console.log('연금 리허설 시작 성공', rehearsal);
       navigate('/simulation/1');
     } catch (error) {
       if (isAxiosError(error)) {
         console.error('연금 리허설 시작 실패 응답', error.response?.data);
       }
       console.error('연금 리허설 시작에 실패했어요.', error);
+      setRehearsalErrorMessage('리허설을 시작하지 못했어요. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsStartingRehearsal(false);
     }
@@ -230,6 +232,11 @@ export default function ResultPreview() {
 
         {/* 시작하기 버튼 */}
         <div className="px-6 py-5 shrink-0 bg-background-50 border-t border-background-100">
+          {rehearsalErrorMessage && (
+            <p className="mb-3 text-center text-sm font-medium text-accent-600">
+              {rehearsalErrorMessage}
+            </p>
+          )}
           <button
             type="button"
             onClick={handleStartRehearsal}

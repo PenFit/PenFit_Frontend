@@ -4,6 +4,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { createPensionSetup } from '../../../apis/setup';
 import ProgressBar from '../../../components/ProgressBar';
 import AmountSlider from '../../../components/AmountSlider';
+import {
+  MAX_MONTHLY_CONTRIBUTION_MANWON,
+  MIN_MONTHLY_CONTRIBUTION_MANWON,
+  PREVIEW_STORAGE_KEY,
+  SELECTED_ACCOUNT_STORAGE_KEY,
+  isAllowedAccountTypeCode,
+  isValidMonthlyContributionManwon,
+} from '../setupValidation';
 
 interface AmountInputLocationState {
   accountType?: string;
@@ -16,34 +24,55 @@ export default function AmountInput() {
 
   const [amount, setAmount] = useState<number>(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const selectedAccountType =
-    locationState?.accountType ?? sessionStorage.getItem('selectedPensionAccountType');
+    locationState?.accountType ?? sessionStorage.getItem(SELECTED_ACCOUNT_STORAGE_KEY);
 
   const handlePreview = async () => {
-    if (!selectedAccountType || isSubmitting) {
+    if (isSubmitting) {
+      return;
+    }
+
+    if (!isAllowedAccountTypeCode(selectedAccountType)) {
       navigate('/account-select', { replace: true });
+      return;
+    }
+    const accountType = selectedAccountType ?? '';
+
+    if (!isValidMonthlyContributionManwon(amount)) {
+      setErrorMessage(
+        `월 납입 금액은 ${MIN_MONTHLY_CONTRIBUTION_MANWON}만원 이상 ${MAX_MONTHLY_CONTRIBUTION_MANWON.toLocaleString('ko-KR')}만원 이하로 입력해주세요.`,
+      );
       return;
     }
 
     setIsSubmitting(true);
+    setErrorMessage('');
 
     try {
       const pensionSetup = await createPensionSetup({
-        accountType: selectedAccountType,
+        accountType,
         monthlyContribution: amount * 10000,
       });
 
-      sessionStorage.setItem('pensionSetupPreview', JSON.stringify(pensionSetup));
-      console.log('연금 설정 등록 성공', pensionSetup);
+      sessionStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(pensionSetup));
       navigate('/result-preview');
     } catch (error) {
       if (isAxiosError(error)) {
         console.error('연금 설정 등록 실패 응답', error.response?.data);
       }
       console.error('연금 설정 등록에 실패했어요.', error);
+      setErrorMessage('연금 설정을 등록하지 못했어요. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAmountChange = (nextAmount: number) => {
+    setAmount(nextAmount);
+    if (errorMessage) {
+      setErrorMessage('');
     }
   };
 
@@ -65,11 +94,18 @@ export default function AmountInput() {
         <div className="flex-1 flex flex-col px-6 pt-4 pb-4">
           <AmountSlider
             value={amount}
-            onChange={setAmount}
-            min={5}
+            onChange={handleAmountChange}
+            min={MIN_MONTHLY_CONTRIBUTION_MANWON}
             max={100}
             step={5}
+            inputMax={MAX_MONTHLY_CONTRIBUTION_MANWON}
           />
+
+          {errorMessage && (
+            <p className="mt-3 text-sm font-medium text-accent-600">
+              {errorMessage}
+            </p>
+          )}
 
           {/* 정보 카드 */}
           <div className="mt-8 space-y-3">
