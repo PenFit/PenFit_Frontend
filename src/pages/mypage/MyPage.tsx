@@ -11,6 +11,10 @@ interface MenuItem {
   variant?: 'default' | 'danger';
 }
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function MyPage() {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState<UserMe | null>(null);
@@ -29,6 +33,7 @@ export default function MyPage() {
   const [isDeletingEmail, setIsDeletingEmail] = useState(false);
   const [isUpdatingEmailConsent, setIsUpdatingEmailConsent] = useState(false);
   const [isUpdatingNickname, setIsUpdatingNickname] = useState(false);
+  const [emailErrorMessage, setEmailErrorMessage] = useState('');
 
   useEffect(() => {
     const fetchMyInformation = async () => {
@@ -52,8 +57,7 @@ export default function MyPage() {
     setIsLoggingOut(true);
 
     try {
-      const logoutData = await logout();
-      console.log('로그아웃 성공', logoutData);
+      await logout();
     } catch (error) {
       console.error('로그아웃 API 호출에 실패했어요.', error);
     } finally {
@@ -77,14 +81,19 @@ export default function MyPage() {
       return;
     }
 
+    if (!isValidEmail(nextEmail)) {
+      setEmailErrorMessage('올바른 이메일 주소를 입력해주세요.');
+      return;
+    }
+
     setIsUpdatingEmail(true);
 
     try {
       const updatedUser = await updateMyEmail(nextEmail);
       setUserInfo(updatedUser);
       setEmailInput(updatedUser.email);
+      setEmailErrorMessage('');
       setIsEditingEmail(false);
-      console.log('이메일 수정 성공', updatedUser);
     } catch (error) {
       console.error('이메일 수정에 실패했어요.', error);
     } finally {
@@ -100,12 +109,12 @@ export default function MyPage() {
     setIsDeletingEmail(true);
 
     try {
-      const deleteMessage = await deleteEmail();
+      await deleteEmail();
       setUserInfo((prev) => (prev ? { ...prev, email: '' } : prev));
       setEmailInput('');
+      setEmailErrorMessage('');
       setShowDeleteEmailConfirm(false);
       setShowEmail(false);
-      console.log('이메일 삭제 성공', deleteMessage);
     } catch (error) {
       console.error('이메일 삭제에 실패했어요.', error);
     } finally {
@@ -126,7 +135,6 @@ export default function MyPage() {
       setUnsubscribed(true);
       setShowUnsubscribe(false);
       window.setTimeout(() => setUnsubscribed(false), 2500);
-      console.log('이메일 수신 거부 성공', updatedUser);
     } catch (error) {
       console.error('이메일 수신 거부에 실패했어요.', error);
     } finally {
@@ -149,7 +157,6 @@ export default function MyPage() {
       setNickname(updatedUser.nickname);
       setNicknameInput(updatedUser.nickname);
       setShowNickname(false);
-      console.log('닉네임 수정 성공', updatedUser);
     } catch (error) {
       console.error('닉네임 수정에 실패했어요.', error);
     } finally {
@@ -201,6 +208,14 @@ export default function MyPage() {
   const userEmail = userInfo?.email ?? '이메일 정보를 불러오는 중이에요';
   const hasEmail = Boolean(userInfo?.email);
   const emailConsentLabel = userInfo?.emailConsent ? '수신 동의' : '수신 미동의';
+  const trimmedEmailInput = emailInput.trim();
+  const emailFormatErrorMessage =
+    isEditingEmail && trimmedEmailInput && !isValidEmail(trimmedEmailInput)
+      ? '올바른 이메일 주소를 입력해주세요.'
+      : '';
+  const visibleEmailErrorMessage = emailErrorMessage || emailFormatErrorMessage;
+  const canSaveEmail =
+    isEditingEmail && isValidEmail(trimmedEmailInput) && !isUpdatingEmail;
 
   return (
     <>
@@ -311,14 +326,17 @@ export default function MyPage() {
                 {isEditingEmail ? (
                   <div className="flex items-center gap-3">
                     <i className="ri-mail-line text-primary-500 text-lg w-5 h-5 flex items-center justify-center" />
-                    <input
-                      type="email"
-                      value={emailInput}
-                      onChange={(e) => setEmailInput(e.target.value)}
-                      className="min-w-0 flex-1 bg-transparent text-sm text-foreground-950 outline-none placeholder:text-foreground-400"
-                      placeholder="email@example.com"
-                    />
-                  </div>
+	                    <input
+	                      type="email"
+	                      value={emailInput}
+	                      onChange={(e) => {
+	                        setEmailInput(e.target.value);
+	                        setEmailErrorMessage('');
+	                      }}
+	                      className="min-w-0 flex-1 bg-transparent text-sm text-foreground-950 outline-none placeholder:text-foreground-400"
+	                      placeholder="email@example.com"
+	                    />
+	                  </div>
                 ) : (
                   <div className="flex items-center gap-3">
                     <i className="ri-mail-line text-primary-500 text-lg w-5 h-5 flex items-center justify-center" />
@@ -327,19 +345,25 @@ export default function MyPage() {
                     </span>
                   </div>
                 )}
-                <p className="mt-2 text-xs text-foreground-500">
-                  이메일 리포트 {emailConsentLabel}
-                </p>
-              </div>
+	                <p className="mt-2 text-xs text-foreground-500">
+	                  이메일 리포트 {emailConsentLabel}
+	                </p>
+	                {visibleEmailErrorMessage && (
+	                  <p className="mt-2 text-xs text-accent-600">
+	                    {visibleEmailErrorMessage}
+	                  </p>
+	                )}
+	              </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    if (isEditingEmail) {
-                      setEmailInput(userInfo?.email ?? '');
-                      setIsEditingEmail(false);
-                      return;
-                    }
+	                    if (isEditingEmail) {
+	                      setEmailInput(userInfo?.email ?? '');
+	                      setEmailErrorMessage('');
+	                      setIsEditingEmail(false);
+	                      return;
+	                    }
 
                     if (hasEmail) {
                       setShowDeleteEmailConfirm(true);
@@ -362,10 +386,11 @@ export default function MyPage() {
                       return;
                     }
 
-                    setEmailInput(userInfo?.email ?? '');
-                    setIsEditingEmail(true);
-                  }}
-                  disabled={isEditingEmail && (!emailInput.trim() || isUpdatingEmail)}
+	                    setEmailInput(userInfo?.email ?? '');
+	                    setEmailErrorMessage('');
+	                    setIsEditingEmail(true);
+	                  }}
+	                  disabled={isEditingEmail && !canSaveEmail}
                   className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-3 rounded-xl text-sm transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isEditingEmail ? (isUpdatingEmail ? '저장 중' : '저장하기') : hasEmail ? '수정하기' : '등록하기'}
