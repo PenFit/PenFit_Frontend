@@ -103,9 +103,7 @@ export default function Loading() {
           ]);
           setMessage('분석 결과를 바탕으로 연금계획을 만들고 있어요');
 
-          const plan = await createPensionPlan();
-
-          sessionStorage.setItem('pensionPlanResult', JSON.stringify(plan));
+          await createPensionPlan();
 
           if (!isMounted) {
             return;
