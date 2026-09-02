@@ -59,7 +59,6 @@ export default function Step3() {
     };
 
     try {
-      console.log('금융정보 등록 요청', financialProfile);
       await createMyFinancialProfile(financialProfile);
       clearFinancialProfileDraft();
       navigate('/account-select');

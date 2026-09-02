@@ -4,7 +4,7 @@ import ProgressBar from '../../components/ProgressBar';
 import OptionCard from '../../components/OptionCard';
 import SectionTitle from '../../components/SectionTitle';
 import MoneyInput from '../../components/MoneyInput';
-import { saveFinancialProfileDraft } from './financialProfileDraft';
+import { clearFinancialProfileDraft, saveFinancialProfileDraft } from './financialProfileDraft';
 
 const ageOptions = [
   { value: 'AGE_23_25', label: '20대 초반 (23~25세)', icon: 'ri-user-line' },
@@ -37,6 +37,7 @@ export default function Step1() {
       return;
     }
 
+    clearFinancialProfileDraft();
     saveFinancialProfileDraft({
       ageBand: age,
       occupationType: job,
