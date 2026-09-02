@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { createPensionPlan } from '../../../apis/plan';
@@ -32,6 +32,7 @@ const POLL_INTERVAL_MS = 3000;
 
 export default function Loading() {
   const navigate = useNavigate();
+  const hasRequestedPlanRef = useRef(false);
 
   const [items, setItems] = useState<CheckItem[]>(initialItems);
   const [message, setMessage] = useState('당신의 연금 성향을 분석하고 있어요');
@@ -47,11 +48,21 @@ export default function Loading() {
       return undefined;
     }
 
+    sessionStorage.removeItem(REHEARSAL_ANSWER_STATUS_STORAGE_KEY);
+
     const pollAnalysis = async () => {
+      if (!isMounted) {
+        return;
+      }
+
       pollCount += 1;
 
       try {
         const progress = await getRehearsalProgress(rehearsalId);
+
+        if (!isMounted) {
+          return;
+        }
 
         sessionStorage.setItem(REHEARSAL_ANSWER_STATUS_STORAGE_KEY, JSON.stringify(progress));
 
@@ -69,11 +80,11 @@ export default function Loading() {
         try {
           const passport = await getMyPensionPassport();
 
-          if (passport.sustainableMonthlyContribution === 0) {
-            if (!isMounted) {
-              return;
-            }
+          if (!isMounted) {
+            return;
+          }
 
+          if (passport.sustainableMonthlyContribution === 0) {
             setItems([
               { label: '납입 행동 분석 중', status: 'done' },
               { label: '시장 대응 성향 분석 중', status: 'done' },
@@ -91,7 +102,10 @@ export default function Loading() {
           ]);
           setMessage('분석 결과를 바탕으로 연금계획을 만들고 있어요');
 
-          await createPensionPlan();
+          if (!hasRequestedPlanRef.current) {
+            hasRequestedPlanRef.current = true;
+            await createPensionPlan();
+          }
 
           if (!isMounted) {
             return;
@@ -106,6 +120,10 @@ export default function Loading() {
           navigate('/plan-result', { replace: true });
           return;
         } catch (error) {
+          if (!isMounted) {
+            return;
+          }
+
           if (isAxiosError(error) && error.response?.status === 404) {
             if (pollCount < MAX_POLL_COUNT) {
               pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
@@ -127,6 +145,10 @@ export default function Loading() {
           return;
         }
       } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
         if (isAxiosError(error)) {
           console.error('리허설 분석 상태 조회 실패 응답', error.response?.data);
         }
