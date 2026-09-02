@@ -7,6 +7,16 @@ import SectionTitle from '../../components/SectionTitle';
 import MoneyInput from '../../components/MoneyInput';
 import { createMyFinancialProfile, type CreateFinancialProfileRequest } from '../../apis/financial';
 import { clearFinancialProfileDraft, getFinancialProfileDraft } from './financialProfileDraft';
+import {
+  AGE_BAND_CODES,
+  ASSET_BAND_CODES,
+  DEBT_BAND_CODES,
+  EMERGENCY_FUND_BAND_CODES,
+  LIVING_EXPENSE_BAND_CODES,
+  OCCUPATION_TYPE_CODES,
+  isAllowedCode,
+  isValidFinancialAmount,
+} from './financialProfileValidation';
 
 const emergencyOptions = [
   { value: 'EMERGENCY_LT_1M', label: '100만원 미만', icon: 'ri-first-aid-kit-line' },
@@ -22,6 +32,7 @@ export default function Step3() {
   const [savings, setSavings] = useState<string>('');
   const [invest, setInvest] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const allSelected = emergency && savings && invest;
 
@@ -31,6 +42,8 @@ export default function Step3() {
     }
 
     const draft = getFinancialProfileDraft();
+    const monthlySavings = Number(savings);
+    const currentInvestment = Number(invest);
 
     if (
       !draft.ageBand ||
@@ -44,6 +57,21 @@ export default function Step3() {
       return;
     }
 
+    if (
+      !isAllowedCode(draft.ageBand, AGE_BAND_CODES) ||
+      !isAllowedCode(draft.occupationType, OCCUPATION_TYPE_CODES) ||
+      !isValidFinancialAmount(draft.monthlySalary) ||
+      !isAllowedCode(draft.livingExpenseBand, LIVING_EXPENSE_BAND_CODES) ||
+      !isAllowedCode(draft.assetBand, ASSET_BAND_CODES) ||
+      !isAllowedCode(draft.debtBand, DEBT_BAND_CODES) ||
+      !isAllowedCode(emergency, EMERGENCY_FUND_BAND_CODES) ||
+      !isValidFinancialAmount(monthlySavings) ||
+      !isValidFinancialAmount(currentInvestment)
+    ) {
+      setErrorMessage('입력한 정보를 다시 확인해주세요.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const financialProfile: CreateFinancialProfileRequest = {
@@ -54,8 +82,8 @@ export default function Step3() {
       assetBand: draft.assetBand,
       debtBand: draft.debtBand,
       emergencyFundBand: emergency,
-      monthlySavings: Number(savings),
-      currentInvestment: Number(invest),
+      monthlySavings,
+      currentInvestment,
     };
 
     try {
@@ -98,7 +126,10 @@ export default function Step3() {
                   label={opt.label}
                   icon={opt.icon}
                   selected={emergency === opt.value}
-                  onClick={() => setEmergency(opt.value)}
+	                  onClick={() => {
+                      setEmergency(opt.value);
+                      setErrorMessage('');
+                    }}
                 />
               ))}
             </div>
@@ -109,7 +140,10 @@ export default function Step3() {
             <SectionTitle title="저축 금액 (월)" />
             <MoneyInput
               value={savings}
-              onChange={setSavings}
+	              onChange={(value) => {
+                  setSavings(value);
+                  setErrorMessage('');
+                }}
               placeholder="한 달 저축 금액을 원 단위로 입력하세요"
               icon="ri-safe-line"
               suffix="원"
@@ -121,13 +155,21 @@ export default function Step3() {
             <SectionTitle title="현재 투자 금액" />
             <MoneyInput
               value={invest}
-              onChange={setInvest}
+	              onChange={(value) => {
+                  setInvest(value);
+                  setErrorMessage('');
+                }}
               placeholder="현재 투자 금액을 원 단위로 입력하세요"
               icon="ri-line-chart-line"
               suffix="원"
             />
-          </div>
-        </div>
+	          </div>
+            {errorMessage && (
+              <p className="text-sm font-semibold text-accent-600">
+                {errorMessage}
+              </p>
+            )}
+	        </div>
 
         {/* 다음 버튼 */}
         <div className="px-6 py-5 shrink-0 bg-background-50 border-t border-background-100">

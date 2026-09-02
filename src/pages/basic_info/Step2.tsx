@@ -4,6 +4,12 @@ import ProgressBar from '../../components/ProgressBar';
 import OptionCard from '../../components/OptionCard';
 import SectionTitle from '../../components/SectionTitle';
 import { saveFinancialProfileDraft } from './financialProfileDraft';
+import {
+  ASSET_BAND_CODES,
+  DEBT_BAND_CODES,
+  LIVING_EXPENSE_BAND_CODES,
+  isAllowedCode,
+} from './financialProfileValidation';
 
 const expenseOptions = [
   { value: 'LIVING_LE_1M', label: '100만원 이하', icon: 'ri-restaurant-line' },
@@ -32,11 +38,21 @@ export default function Step2() {
   const [expense, setExpense] = useState<string>('');
   const [asset, setAsset] = useState<string>('');
   const [debt, setDebt] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const allSelected = expense && asset && debt;
 
   const handleNext = () => {
     if (!allSelected) {
+      return;
+    }
+
+    if (
+      !isAllowedCode(expense, LIVING_EXPENSE_BAND_CODES) ||
+      !isAllowedCode(asset, ASSET_BAND_CODES) ||
+      !isAllowedCode(debt, DEBT_BAND_CODES)
+    ) {
+      setErrorMessage('선택한 정보를 다시 확인해주세요.');
       return;
     }
 
@@ -74,7 +90,10 @@ export default function Step2() {
                   label={opt.label}
                   icon={opt.icon}
                   selected={expense === opt.value}
-                  onClick={() => setExpense(opt.value)}
+	                  onClick={() => {
+                      setExpense(opt.value);
+                      setErrorMessage('');
+                    }}
                 />
               ))}
             </div>
@@ -90,7 +109,10 @@ export default function Step2() {
                   label={opt.label}
                   icon={opt.icon}
                   selected={asset === opt.value}
-                  onClick={() => setAsset(opt.value)}
+	                  onClick={() => {
+                      setAsset(opt.value);
+                      setErrorMessage('');
+                    }}
                 />
               ))}
             </div>
@@ -106,11 +128,19 @@ export default function Step2() {
                   label={opt.label}
                   icon={opt.icon}
                   selected={debt === opt.value}
-                  onClick={() => setDebt(opt.value)}
+	                  onClick={() => {
+                      setDebt(opt.value);
+                      setErrorMessage('');
+                    }}
                 />
               ))}
-            </div>
-          </div>
+	          </div>
+            {errorMessage && (
+              <p className="text-sm font-semibold text-accent-600">
+                {errorMessage}
+              </p>
+            )}
+	        </div>
         </div>
 
         {/* 다음 버튼 */}
