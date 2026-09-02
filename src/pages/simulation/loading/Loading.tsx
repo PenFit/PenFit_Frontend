@@ -4,6 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { createPensionPlan } from '../../../apis/plan';
 import { getMyPensionPassport } from '../../../apis/passport';
 import { getRehearsalProgress } from '../../../apis/simulation';
+import {
+  REHEARSAL_ANSWER_STATUS_STORAGE_KEY,
+  getStoredRehearsalId,
+} from '../../../utils/rehearsalStorage';
 
 interface CheckItem {
   label: string;
@@ -25,22 +29,6 @@ const FAILED_STATUS_CODES = new Set([
 
 const MAX_POLL_COUNT = 40;
 const POLL_INTERVAL_MS = 3000;
-
-function getStoredRehearsalId() {
-  const storedRehearsal = sessionStorage.getItem('rehearsalStart');
-
-  if (!storedRehearsal) {
-    return null;
-  }
-
-  try {
-    const rehearsal = JSON.parse(storedRehearsal) as { rehearsalId?: number };
-
-    return rehearsal.rehearsalId ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export default function Loading() {
   const navigate = useNavigate();
@@ -65,7 +53,7 @@ export default function Loading() {
       try {
         const progress = await getRehearsalProgress(rehearsalId);
 
-        sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(progress));
+        sessionStorage.setItem(REHEARSAL_ANSWER_STATUS_STORAGE_KEY, JSON.stringify(progress));
 
         if (FAILED_STATUS_CODES.has(progress.status.code)) {
           navigate('/status/error', { replace: true });

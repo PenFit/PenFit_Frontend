@@ -8,6 +8,7 @@ import SimOptionCard from '../../components/SimOptionCard';
 import NotFound from '../NotFound';
 import { useRehearsalProgress, useSimulations, useStoredRehearsalId } from '../../hooks/useSimulations';
 import { Navigate } from 'react-router-dom';
+import { REHEARSAL_ANSWER_STATUS_STORAGE_KEY } from '../../utils/rehearsalStorage';
 
 export default function Simulation() {
   const navigate = useNavigate();
@@ -26,9 +27,11 @@ export default function Simulation() {
 
   const [selected, setSelected] = useState<string>('');
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     setSelected(savedAnswer?.optionCode ?? '');
+    setErrorMessage('');
   }, [savedAnswer?.optionCode, stepNum]);
 
   if (!rehearsalId) {
@@ -65,6 +68,15 @@ export default function Simulation() {
       return;
     }
 
+    const isValidOption = simulation.options.some((option) => option.value === selected);
+
+    if (!isValidOption) {
+      setErrorMessage('선택할 수 없는 답변이에요. 다시 선택해주세요.');
+      return;
+    }
+
+    setErrorMessage('');
+
     if (savedAnswer?.optionCode === selected) {
       if (!isLast) {
         navigate(nextPath);
@@ -75,14 +87,14 @@ export default function Simulation() {
 
       try {
         const completeResult = await completeRehearsal(rehearsalId);
-        sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(completeResult));
-        console.log('리허설 완료 제출 성공', completeResult);
+        sessionStorage.setItem(REHEARSAL_ANSWER_STATUS_STORAGE_KEY, JSON.stringify(completeResult));
         navigate(nextPath);
       } catch (error) {
         if (isAxiosError(error)) {
           console.error('리허설 완료 제출 실패 응답', error.response?.data);
         }
         console.error('리허설 완료 제출에 실패했어요.', error);
+        setErrorMessage('리허설 제출에 실패했어요. 다시 시도해주세요.');
       } finally {
         setIsSavingAnswer(false);
       }
@@ -99,14 +111,12 @@ export default function Simulation() {
         selected,
       );
 
-      sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(answerResult));
+      sessionStorage.setItem(REHEARSAL_ANSWER_STATUS_STORAGE_KEY, JSON.stringify(answerResult));
       queryClient.invalidateQueries({ queryKey: ['simulations', rehearsalId, 'progress'] });
-      console.log('리허설 답변 저장 성공', answerResult);
 
       if (isLast) {
         const completeResult = await completeRehearsal(rehearsalId);
-        sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(completeResult));
-        console.log('리허설 완료 제출 성공', completeResult);
+        sessionStorage.setItem(REHEARSAL_ANSWER_STATUS_STORAGE_KEY, JSON.stringify(completeResult));
       }
 
       navigate(nextPath);
@@ -115,6 +125,7 @@ export default function Simulation() {
         console.error('리허설 답변 처리 실패 응답', error.response?.data);
       }
       console.error('리허설 답변 처리에 실패했어요.', error);
+      setErrorMessage('답변을 저장하지 못했어요. 다시 시도해주세요.');
     } finally {
       setIsSavingAnswer(false);
     }
@@ -170,7 +181,12 @@ export default function Simulation() {
                 label={opt.label}
                 subtitle={opt.subtitle}
                 selected={selected === opt.value}
-                onClick={() => setSelected(opt.value)}
+                onClick={() => {
+                  setSelected(opt.value);
+                  if (errorMessage) {
+                    setErrorMessage('');
+                  }
+                }}
               />
             ))}
           </div>
@@ -178,6 +194,11 @@ export default function Simulation() {
 
         {/* 다음 버튼 */}
         <div className="px-6 py-5 shrink-0 bg-background-50 border-t border-background-100">
+          {errorMessage && (
+            <p className="mb-3 text-center text-sm font-medium text-accent-600">
+              {errorMessage}
+            </p>
+          )}
           <button
             type="button"
             onClick={handleNext}
