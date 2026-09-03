@@ -2,9 +2,11 @@ import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import {
+  getMySavedProducts,
   getPensionProductDetail,
   getProductRecommendationComparison,
   type ProductRecommendationComparison,
+  type ProductRecommendationComparisonItem,
 } from '../../../apis/recommend';
 import BottomNav from '../../../components/BottomNav';
 import { getStoredProductRecommendations } from '../recommendationStorage';
@@ -14,6 +16,17 @@ const compareCriteria = [
   { key: 'investmentScope', label: '투자상품 선택 범위' },
   { key: 'fitLevel', label: '적합도' },
 ];
+
+const SAVED_PRODUCT_FIT_LEVEL = {
+  code: 'SAVED_PRODUCT',
+  displayName: '담은 상품',
+};
+
+function getSavedAtTime(savedAt: string) {
+  const savedAtTime = new Date(savedAt).getTime();
+
+  return Number.isFinite(savedAtTime) ? savedAtTime : Number.MAX_SAFE_INTEGER;
+}
 
 async function getComparisonWithFallback(): Promise<ProductRecommendationComparison> {
   try {
@@ -28,26 +41,46 @@ async function getComparisonWithFallback(): Promise<ProductRecommendationCompari
       .sort((a, b) => a.rank - b.rank)
       .slice(0, 3);
 
-    if (storedRecommendations.length === 0) {
-      throw error;
+    if (storedRecommendations.length > 0) {
+      const products = await Promise.all(
+        storedRecommendations.map(async (recommendation) => {
+          const detail = await getPensionProductDetail(recommendation.productId);
+
+          return {
+            rank: recommendation.rank,
+            productId: recommendation.productId,
+            providerName: detail.providerName,
+            productName: detail.productName,
+            feeMinRate: detail.feeMinRate,
+            feeMaxRate: detail.feeMaxRate,
+            investmentScope: detail.investmentScope,
+            fitLevel: recommendation.fitLevel,
+          };
+        }),
+      );
+
+      return { products };
     }
 
-    const products = await Promise.all(
-      storedRecommendations.map(async (recommendation) => {
-        const detail = await getPensionProductDetail(recommendation.productId);
+    const savedProducts = await getMySavedProducts();
+    const products: ProductRecommendationComparisonItem[] = savedProducts
+      .slice()
+      .sort((a, b) => getSavedAtTime(a.savedAt) - getSavedAtTime(b.savedAt))
+      .slice(0, 3)
+      .map((product, index) => ({
+        rank: index + 1,
+        productId: product.productId,
+        providerName: product.providerName,
+        productName: product.productName,
+        feeMinRate: product.feeMinRate,
+        feeMaxRate: product.feeMaxRate,
+        investmentScope: product.investmentScope,
+        fitLevel: SAVED_PRODUCT_FIT_LEVEL,
+      }));
 
-        return {
-          rank: recommendation.rank,
-          productId: recommendation.productId,
-          providerName: detail.providerName,
-          productName: detail.productName,
-          feeMinRate: detail.feeMinRate,
-          feeMaxRate: detail.feeMaxRate,
-          investmentScope: detail.investmentScope,
-          fitLevel: recommendation.fitLevel,
-        };
-      }),
-    );
+    if (products.length === 0) {
+      throw error;
+    }
 
     return { products };
   }
