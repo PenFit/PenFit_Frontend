@@ -1,17 +1,49 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import icon from "../../assets/icon.png";
 import kakaoButton from "../../assets/kakao_button.png";
+import { loginWithDemoAccount, saveAuthSession } from "../../apis/auth";
 import Button from "../../components/Button";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [agreed, setAgreed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showAgreementAlert, setShowAgreementAlert] = useState(false);
+  const [isDemoLoggingIn, setIsDemoLoggingIn] = useState(false);
+  const [demoLoginErrorMessage, setDemoLoginErrorMessage] = useState("");
+
+  const requireAgreement = () => {
+    if (agreed) {
+      return true;
+    }
+
+    setShowAgreementAlert(true);
+    return false;
+  };
+
+  const handleDemoLogin = async () => {
+    if (!requireAgreement() || isDemoLoggingIn) {
+      return;
+    }
+
+    setIsDemoLoggingIn(true);
+    setDemoLoginErrorMessage("");
+
+    try {
+      const authData = await loginWithDemoAccount();
+      saveAuthSession(authData);
+      navigate(authData.newUser ? "/step1" : "/home", { replace: true });
+    } catch {
+      setDemoLoginErrorMessage("심사용 데모 로그인에 실패했어요. 다시 시도해주세요.");
+    } finally {
+      setIsDemoLoggingIn(false);
+    }
+  };
 
   // 동의 전에는 경고 모달을 띄움. 동의 후에는 카카오 인가 페이지로 이동
   const handleKakaoLogin = () => {
-    if (!agreed) {
-      setShowAgreementAlert(true);
+    if (!requireAgreement()) {
       return;
     }
 
@@ -49,6 +81,24 @@ export default function Login() {
 
       {/* 하단 로그인 버튼, 약관 동의, 안내 문구 영역 */}
       <section className="flex flex-col gap-4 px-6 pb-8">
+        <button
+          type="button"
+          onClick={handleDemoLogin}
+          disabled={isDemoLoggingIn}
+          className={`w-full rounded-lg border border-primary-500 bg-background-50 py-3.5 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60 ${
+            agreed ? "opacity-100" : "opacity-40"
+          }`}
+          aria-disabled={!agreed || isDemoLoggingIn}
+        >
+          {isDemoLoggingIn ? "데모 로그인 중" : "심사용 데모 로그인"}
+        </button>
+
+        {demoLoginErrorMessage && (
+          <p className="text-center text-xs font-medium text-accent-600">
+            {demoLoginErrorMessage}
+          </p>
+        )}
+
         <button
           type="button"
           onClick={handleKakaoLogin}

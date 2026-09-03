@@ -4,7 +4,13 @@ import ProgressBar from '../../components/ProgressBar';
 import OptionCard from '../../components/OptionCard';
 import SectionTitle from '../../components/SectionTitle';
 import MoneyInput from '../../components/MoneyInput';
-import { saveFinancialProfileDraft } from './financialProfileDraft';
+import { clearFinancialProfileDraft, saveFinancialProfileDraft } from './financialProfileDraft';
+import {
+  AGE_BAND_CODES,
+  OCCUPATION_TYPE_CODES,
+  isAllowedCode,
+  isValidFinancialAmount,
+} from './financialProfileValidation';
 
 const ageOptions = [
   { value: 'AGE_23_25', label: '20대 초반 (23~25세)', icon: 'ri-user-line' },
@@ -29,18 +35,31 @@ export default function Step1() {
   const [age, setAge] = useState<string>('');
   const [job, setJob] = useState<string>('');
   const [salary, setSalary] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const allSelected = age && job && salary;
 
   const handleNext = () => {
+    const monthlySalary = Number(salary);
+
     if (!allSelected) {
       return;
     }
 
+    if (
+      !isAllowedCode(age, AGE_BAND_CODES) ||
+      !isAllowedCode(job, OCCUPATION_TYPE_CODES) ||
+      !isValidFinancialAmount(monthlySalary)
+    ) {
+      setErrorMessage('입력한 정보를 다시 확인해주세요.');
+      return;
+    }
+
+    clearFinancialProfileDraft();
     saveFinancialProfileDraft({
       ageBand: age,
       occupationType: job,
-      monthlySalary: Number(salary),
+      monthlySalary,
     });
     navigate('/step2');
   };
@@ -71,7 +90,10 @@ export default function Step1() {
                   label={opt.label}
                   icon={opt.icon}
                   selected={age === opt.value}
-                  onClick={() => setAge(opt.value)}
+	                  onClick={() => {
+                      setAge(opt.value);
+                      setErrorMessage('');
+                    }}
                 />
               ))}
             </div>
@@ -87,7 +109,10 @@ export default function Step1() {
                   label={opt.label}
                   icon={opt.icon}
                   selected={job === opt.value}
-                  onClick={() => setJob(opt.value)}
+	                  onClick={() => {
+                      setJob(opt.value);
+                      setErrorMessage('');
+                    }}
                 />
               ))}
             </div>
@@ -98,13 +123,21 @@ export default function Step1() {
             <SectionTitle title="월급" />
             <MoneyInput
               value={salary}
-              onChange={setSalary}
+	              onChange={(value) => {
+                  setSalary(value);
+                  setErrorMessage('');
+                }}
               placeholder="월급을 원 단위로 입력하세요"
               icon="ri-money-cny-circle-line"
               suffix="원"
             />
-          </div>
-        </div>
+	          </div>
+            {errorMessage && (
+              <p className="text-sm font-semibold text-accent-600">
+                {errorMessage}
+              </p>
+            )}
+	        </div>
 
         {/* 다음 버튼 */}
         <div className="px-6 py-5 shrink-0 bg-background-50 border-t border-background-100">

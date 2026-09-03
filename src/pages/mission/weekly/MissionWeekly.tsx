@@ -10,8 +10,8 @@ import {
 import BottomNav from '../../../components/BottomNav';
 import Button from '../../../components/Button';
 
-function formatWon(amount: number) {
-  return `${amount.toLocaleString('ko-KR')}원`;
+function formatWon(amount?: number | null) {
+  return `${(amount ?? 0).toLocaleString('ko-KR')}원`;
 }
 
 function isStartedStatus(code: string) {
@@ -26,6 +26,7 @@ export default function MissionWeekly() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const {
     data: mission,
     isLoading,
@@ -62,6 +63,7 @@ export default function MissionWeekly() {
       return;
     }
 
+    setShowCompleteConfirm(false);
     setIsSubmitting(true);
 
     try {
@@ -116,8 +118,15 @@ export default function MissionWeekly() {
     );
   }
 
-  const started = isStartedStatus(mission.status.code);
-  const completed = isCompletedStatus(mission.status.code);
+  const missionStatusCode = mission.status?.code ?? '';
+  const started = isStartedStatus(missionStatusCode);
+  const completed = isCompletedStatus(missionStatusCode);
+  const statusDisplayName = mission.status?.displayName ?? '미션';
+  const topCategoryDisplayName = mission.topCategory?.displayName ?? '주요 지출';
+  const topCategoryRatio = mission.topCategoryRatio ?? 0;
+  const daysLeft = mission.daysLeft ?? 0;
+  const durationDays = mission.durationDays ?? 0;
+  const dueDate = mission.dueDate ?? '';
 
   return (
     <>
@@ -127,14 +136,14 @@ export default function MissionWeekly() {
             이번 주 미션
           </h1>
           <span className="text-xs font-semibold text-background-50 bg-accent-500 px-2.5 py-1 rounded-full">
-            D-{mission.daysLeft}
+            D-{daysLeft}
           </span>
         </div>
 
         <div className="border-2 border-accent-400 rounded-xl p-5 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs font-semibold text-background-50 bg-accent-500 px-2.5 py-1 rounded-full">
-              {mission.status.displayName}
+              {statusDisplayName}
             </span>
           </div>
           <h2 className="text-xl font-bold text-foreground-950 mb-2">
@@ -152,7 +161,7 @@ export default function MissionWeekly() {
               <div className="flex-1">
                 <p className="text-xs text-foreground-500">주요 지출</p>
                 <p className="text-sm font-semibold text-foreground-950">
-                  {mission.topCategory.displayName} {mission.topCategoryRatio}%
+                  {topCategoryDisplayName} {topCategoryRatio}%
                 </p>
               </div>
             </div>
@@ -166,7 +175,7 @@ export default function MissionWeekly() {
                   {formatWon(mission.targetAmount)}
                 </p>
               </div>
-              <p className="text-xs text-foreground-400">{mission.durationDays}일 동안</p>
+              <p className="text-xs text-foreground-400">{durationDays}일 동안</p>
             </div>
             <div className="flex items-center gap-3 bg-background-100 rounded-lg p-3">
               <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
@@ -174,7 +183,7 @@ export default function MissionWeekly() {
               </div>
               <div className="flex-1">
                 <p className="text-xs text-foreground-500">마감일</p>
-                <p className="text-sm font-semibold text-foreground-950">{mission.dueDate}</p>
+                <p className="text-sm font-semibold text-foreground-950">{dueDate}</p>
               </div>
             </div>
           </div>
@@ -198,10 +207,26 @@ export default function MissionWeekly() {
             </span>
           </div>
 
+          {started && !completed && (
+            <div className="mb-5 rounded-xl border border-primary-100 bg-primary-50 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-500">
+                  <i className="ri-run-line flex h-4 w-4 items-center justify-center text-sm text-background-50" />
+                </div>
+                <p className="text-sm font-bold text-primary-700">
+                  진행 중인 미션
+                </p>
+              </div>
+              <p className="text-sm leading-relaxed text-foreground-700">
+                오늘부터 이 목표를 실천해보세요. 완료했다면 아래 버튼으로 기록할 수 있어요.
+              </p>
+            </div>
+          )}
+
 	          <button
 	            type="button"
 	            disabled={isSubmitting}
-	            onClick={completed ? () => navigate('/mission/complete') : started ? handleComplete : handleStart}
+	            onClick={completed ? () => navigate('/mission/complete') : started ? () => setShowCompleteConfirm(true) : handleStart}
 	            className={`w-full rounded-xl py-3.5 text-sm font-semibold text-background-50 transition-colors whitespace-nowrap ${
 	              isSubmitting
 	                ? 'cursor-not-allowed bg-background-300'
@@ -214,6 +239,40 @@ export default function MissionWeekly() {
       </div>
 
       <BottomNav />
+
+      {showCompleteConfirm && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 px-6 animate-fade-in">
+          <section className="w-full max-w-sm rounded-xl bg-background-50 p-6 text-center shadow-lg">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary-50">
+              <i className="ri-checkbox-circle-line flex h-7 w-7 items-center justify-center text-2xl text-primary-500" />
+            </div>
+            <h2 className="mb-2 font-heading text-lg font-bold text-foreground-950">
+              이번 주 미션을 완료했나요?
+            </h2>
+            <p className="mb-6 text-sm leading-relaxed text-foreground-600">
+              완료하면 이번 주 절약 성과와 예상 연금자산 증가분이 기록돼요.
+            </p>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handleComplete}
+                disabled={isSubmitting}
+                className="w-full rounded-lg bg-primary-500 py-3.5 text-sm font-semibold text-background-50 transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? '완료 처리 중' : '완료하기'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCompleteConfirm(false)}
+                disabled={isSubmitting}
+                className="w-full rounded-lg bg-background-100 py-3.5 text-sm font-semibold text-foreground-700 transition-colors hover:bg-background-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                계속 진행하기
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }

@@ -1,15 +1,22 @@
 import { useNavigate } from 'react-router-dom';
-import { isAxiosError } from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { getMyHome, type HomeSavedProduct } from '../../apis/home';
 import BottomNav from '../../components/BottomNav';
 import { saveSelectedProductRecommendation } from '../recommend/recommendationStorage';
 
 function formatWon(amount: number) {
+  if (!Number.isFinite(amount) || amount < 0) {
+    return '-';
+  }
+
   return `${amount.toLocaleString('ko-KR')}원`;
 }
 
 function formatKoreanAsset(amount: number) {
+  if (!Number.isFinite(amount) || amount < 0) {
+    return '-';
+  }
+
   const manwon = Math.round(amount / 10000);
 
   if (manwon < 10000) {
@@ -24,10 +31,22 @@ function formatKoreanAsset(amount: number) {
     : `${eok.toLocaleString('ko-KR')}억원`;
 }
 
+function isValidProductId(productId: number) {
+  return Number.isSafeInteger(productId) && productId > 0;
+}
+
+function isValidSavedProduct(product: HomeSavedProduct) {
+  return isValidProductId(product.productId);
+}
+
 function SavedProductPreview({ product }: { product: HomeSavedProduct }) {
   const navigate = useNavigate();
 
   const handleDetail = () => {
+    if (!isValidProductId(product.productId)) {
+      return;
+    }
+
     saveSelectedProductRecommendation(String(product.productId));
     navigate('/recommend/detail');
   };
@@ -63,7 +82,6 @@ export default function Home() {
     data: home,
     isLoading,
     isError,
-    error,
   } = useQuery({
     queryKey: ['myHome'],
     queryFn: getMyHome,
@@ -85,10 +103,6 @@ export default function Home() {
   }
 
   if (isError || !home) {
-    const errorMessage = isAxiosError(error)
-      ? error.response?.data?.message
-      : undefined;
-
     return (
       <>
         <div className="flex-1 overflow-y-auto pb-24">
@@ -98,7 +112,7 @@ export default function Home() {
             </div>
             <h1 className="mb-2 text-xl font-bold text-foreground-950">홈 정보를 불러오지 못했어요</h1>
             <p className="mb-6 text-sm leading-relaxed text-foreground-500">
-              {errorMessage ?? '잠시 후 다시 시도해주세요.'}
+              잠시 후 다시 시도해주세요.
             </p>
             <button
               type="button"
@@ -113,6 +127,10 @@ export default function Home() {
       </>
     );
   }
+
+  const savedProducts = Array.isArray(home.savedProducts)
+    ? home.savedProducts.filter(isValidSavedProduct)
+    : [];
 
   return (
     <>
@@ -257,9 +275,9 @@ export default function Home() {
             </button>
           </div>
 
-          {home.savedProducts.length > 0 ? (
+          {savedProducts.length > 0 ? (
             <div className="space-y-3">
-              {home.savedProducts.slice(0, 2).map((product) => (
+              {savedProducts.slice(0, 2).map((product) => (
                 <SavedProductPreview key={product.productId} product={product} />
               ))}
             </div>

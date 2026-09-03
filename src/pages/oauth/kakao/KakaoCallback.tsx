@@ -6,26 +6,37 @@ import { loginWithKakaoCode, saveAuthSession } from "../../../apis/auth";
 // 같은 카카오 인가 code로 로그인 API가 중복 호출되지 않도록 기록
 const requestedCodes = new Set<string>();
 
+function getInitialErrorMessage(code: string | null, state: string | null) {
+  if (!code) {
+    return "카카오 인가 코드를 찾을 수 없어요.";
+  }
+
+  const savedState = sessionStorage.getItem("kakao-oauth-state");
+
+  if (!state || !savedState || state !== savedState) {
+    return "로그인 요청 정보를 확인할 수 없어요. 다시 시도해주세요.";
+  }
+
+  return "";
+}
+
 export default function KakaoCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [errorMessage, setErrorMessage] = useState("");
   const requestedCodeRef = useRef<string | null>(null);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
+  const [errorMessage, setErrorMessage] = useState(() =>
+    getInitialErrorMessage(code, state),
+  );
 
   useEffect(() => {
-    // 카카오 redirect URL에 code가 없으면 로그인 진행 불가
-    if (!code) {
-      setErrorMessage("카카오 인가 코드를 찾을 수 없어요.");
+    if (errorMessage) {
+      sessionStorage.removeItem("kakao-oauth-state");
       return;
     }
 
-    const savedState = sessionStorage.getItem("kakao-oauth-state");
-
-    if (!state || !savedState || state !== savedState) {
-      sessionStorage.removeItem("kakao-oauth-state");
-      setErrorMessage("로그인 요청 정보를 확인할 수 없어요. 다시 시도해주세요.");
+    if (!code) {
       return;
     }
 
@@ -58,7 +69,7 @@ export default function KakaoCallback() {
     };
 
     requestLogin();
-  }, [code, navigate, state]);
+  }, [code, errorMessage, navigate]);
 
   // 로그인 실패 또는 code 누락 시 보여주는 오류 화면
   if (errorMessage) {

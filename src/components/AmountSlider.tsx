@@ -6,6 +6,7 @@ interface AmountSliderProps {
   min?: number;
   max?: number;
   step?: number;
+  inputMax?: number;
 }
 
 export default function AmountSlider({
@@ -14,6 +15,7 @@ export default function AmountSlider({
   min = 5,
   max = 100,
   step = 5,
+  inputMax = max,
 }: AmountSliderProps) {
   const percentage = Math.min(((value - min) / (max - min)) * 100, 100);
   const [draft, setDraft] = useState<string>('');
@@ -31,10 +33,12 @@ export default function AmountSlider({
       setDraft(raw);
       if (raw !== '') {
         const num = Number(raw);
-        onChange(Math.max(num, min));
+        if (Number.isSafeInteger(num)) {
+          onChange(Math.min(Math.max(num, min), inputMax));
+        }
       }
     },
-    [onChange, min]
+    [onChange, min, inputMax]
   );
 
   const handleInputBlur = useCallback(() => {
@@ -104,7 +108,7 @@ export default function AmountSlider({
             value={draft}
             onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder={`${min}만원 이상 (상한 없음)`}
+            placeholder={`${min}만원~${inputMax.toLocaleString('ko-KR')}만원`}
             className="w-full px-3 py-2.5 bg-transparent text-sm text-foreground-950 outline-none placeholder:text-foreground-400"
           />
           <span className="pr-3 text-xs text-foreground-500 whitespace-nowrap">만원</span>

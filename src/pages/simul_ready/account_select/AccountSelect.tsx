@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { getPensionAccountTypes, type PensionAccountType } from '../../../apis/setup';
 import ProgressBar from '../../../components/ProgressBar';
 import AccountCard from '../../../components/AccountCard';
+import {
+  PREVIEW_STORAGE_KEY,
+  SELECTED_ACCOUNT_STORAGE_KEY,
+  saveAccountTypeCodes,
+} from '../setupValidation';
 
 export default function AccountSelect() {
   const navigate = useNavigate();
@@ -17,6 +22,7 @@ export default function AccountSelect() {
       try {
         const pensionAccountTypes = await getPensionAccountTypes();
         setAccountTypes(pensionAccountTypes);
+        saveAccountTypeCodes(pensionAccountTypes.map((accountType) => accountType.code));
       } catch (error) {
         console.error('연금계좌 종류 조회에 실패했어요.', error);
         setErrorMessage('계좌 정보를 불러오지 못했어요.');
@@ -33,7 +39,8 @@ export default function AccountSelect() {
       return;
     }
 
-    sessionStorage.setItem('selectedPensionAccountType', selectedAccount);
+    sessionStorage.setItem(SELECTED_ACCOUNT_STORAGE_KEY, selectedAccount);
+    sessionStorage.removeItem(PREVIEW_STORAGE_KEY);
     navigate('/amount-input', { state: { accountType: selectedAccount } });
   };
 

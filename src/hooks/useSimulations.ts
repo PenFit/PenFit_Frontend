@@ -5,6 +5,7 @@ import {
   type RehearsalScenario,
 } from '../apis/simulation';
 import type { Simulation } from '../mocks/simulations';
+import { getStoredRehearsalId } from '../utils/rehearsalStorage';
 
 export const simulationKeys = {
   all: ['simulations'] as const,
@@ -12,22 +13,6 @@ export const simulationKeys = {
   detail: (rehearsalId: number | null, id: number) => [...simulationKeys.list(rehearsalId), id] as const,
   progress: (rehearsalId: number | null) => [...simulationKeys.all, rehearsalId, 'progress'] as const,
 };
-
-function getStoredRehearsalId() {
-  const storedRehearsal = sessionStorage.getItem('rehearsalStart');
-
-  if (!storedRehearsal) {
-    return null;
-  }
-
-  try {
-    const rehearsal = JSON.parse(storedRehearsal) as { rehearsalId?: number };
-
-    return rehearsal.rehearsalId ?? null;
-  } catch {
-    return null;
-  }
-}
 
 function mapScenarioToSimulation(scenario: RehearsalScenario): Simulation {
   return {

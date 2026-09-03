@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { deleteSavedProduct, getPensionProductDetail, saveProduct } from '../../../apis/recommend';
 import BottomNav from '../../../components/BottomNav';
 import {
@@ -12,6 +12,8 @@ export default function RecommendDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const productId = getSelectedProductRecommendationId();
+  const secondaryButtonClassName =
+    'block w-full rounded-lg border border-background-300 py-3 text-center text-sm font-semibold leading-5 text-foreground-700 transition-colors hover:bg-background-100';
   const {
     data: product,
     isLoading,
@@ -22,12 +24,16 @@ export default function RecommendDetail() {
     queryFn: () => getPensionProductDetail(productId as number),
     enabled: productId !== null,
   });
-  const [saved, setSaved] = useState(false);
+  const [savedOverride, setSavedOverride] = useState<{
+    productId: number | null;
+    saved: boolean;
+  } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    setSaved(product?.saved ?? false);
-  }, [product?.saved]);
+  const [saveErrorMessage, setSaveErrorMessage] = useState('');
+  const saved =
+    savedOverride?.productId === productId
+      ? savedOverride.saved
+      : product?.saved ?? false;
 
   const updateSavedCache = (nextSaved: boolean) => {
     queryClient.setQueryData(['pensionProductDetail', productId], {
@@ -43,34 +49,38 @@ export default function RecommendDetail() {
     }
 
     setIsSaving(true);
+    setSaveErrorMessage('');
 
     try {
       if (saved) {
-        const deleteResult = await deleteSavedProduct(product.productId);
+        await deleteSavedProduct(product.productId);
 
-        setSaved(false);
+        setSavedOverride({ productId, saved: false });
         updateSavedCache(false);
-        console.log('담은 상품 취소 성공', deleteResult);
         return;
       }
 
-      const saveResult = await saveProduct(product.productId);
+      await saveProduct(product.productId);
 
-      setSaved(true);
+      setSavedOverride({ productId, saved: true });
       updateSavedCache(true);
-      console.log('상품 담기 성공', saveResult);
     } catch (error) {
       if (isAxiosError(error)) {
         console.error(saved ? '담은 상품 취소 실패 응답' : '상품 담기 실패 응답', error.response?.data);
 
         if (error.response?.data?.code === 'PR4091') {
-          setSaved(true);
+          setSavedOverride({ productId, saved: true });
           updateSavedCache(true);
           return;
         }
       }
 
       console.error(saved ? '담은 상품 취소에 실패했어요.' : '상품 담기에 실패했어요.', error);
+      setSaveErrorMessage(
+        saved
+          ? '담기 취소를 처리하지 못했어요. 다시 시도해주세요.'
+          : '상품을 담지 못했어요. 다시 시도해주세요.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -122,13 +132,19 @@ export default function RecommendDetail() {
     );
   }
 
+  const providerTypeName = product.providerType?.displayName ?? '금융사';
+  const accountTypeName = product.accountType?.displayName ?? '-';
+  const productTypeName = product.productType?.displayName ?? '-';
+  const features = Array.isArray(product.features) ? product.features : [];
+  const cautions = Array.isArray(product.cautions) ? product.cautions : [];
+
   return (
     <>
         <div className="flex-1 overflow-y-auto pb-24">
       {/* 헤더 */}
       <div className="px-5 pt-6 pb-4">
         <span className="text-xs text-foreground-500">
-          {product.providerType.displayName} · {product.providerName}
+          {providerTypeName} · {product.providerName}
         </span>
         <h1 className="text-xl font-bold text-foreground-950 mt-0.5">
           {product.productName}
@@ -169,13 +185,13 @@ export default function RecommendDetail() {
             <div className="flex items-center justify-between rounded-lg bg-background-100 px-3 py-2">
               <span className="text-sm text-foreground-600">계좌 유형</span>
               <span className="text-sm font-semibold text-foreground-950">
-                {product.accountType.displayName}
+                {accountTypeName}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-background-100 px-3 py-2">
               <span className="text-sm text-foreground-600">상품 유형</span>
               <span className="text-sm font-semibold text-foreground-950">
-                {product.productType.displayName}
+                {productTypeName}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-background-100 px-3 py-2">
@@ -206,14 +222,20 @@ export default function RecommendDetail() {
           <h2 className="text-sm font-bold text-foreground-800 mb-3">
             주요 특징
           </h2>
-          <ul className="space-y-2">
-            {product.features.map((feature, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <i className="ri-check-line text-primary-500 mt-0.5" />
-                <span className="text-sm text-foreground-700">{feature}</span>
-              </li>
-            ))}
-          </ul>
+          {features.length > 0 ? (
+            <ul className="space-y-2">
+              {features.map((feature, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <i className="ri-check-line text-primary-500 mt-0.5" />
+                  <span className="text-sm text-foreground-700">{feature}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-foreground-500">
+              주요 특징 정보가 아직 없어요.
+            </p>
+          )}
         </div>
       </div>
 
@@ -223,14 +245,20 @@ export default function RecommendDetail() {
           <h2 className="text-sm font-bold text-accent-900 mb-3">
             주의사항
           </h2>
-          <ul className="space-y-2">
-            {product.cautions.map((caution, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <i className="ri-error-warning-line text-accent-500 mt-0.5" />
-                <span className="text-sm text-accent-800">{caution}</span>
-              </li>
-            ))}
-          </ul>
+          {cautions.length > 0 ? (
+            <ul className="space-y-2">
+              {cautions.map((caution, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <i className="ri-error-warning-line text-accent-500 mt-0.5" />
+                  <span className="text-sm text-accent-800">{caution}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-accent-800">
+              별도 주의사항 정보가 아직 없어요.
+            </p>
+          )}
         </div>
       </div>
 
@@ -243,12 +271,17 @@ export default function RecommendDetail() {
 
       {/* 하단 버튼 */}
       <div className="px-5 mt-6">
+        {saveErrorMessage && (
+          <p className="mb-3 text-center text-sm font-medium text-accent-600">
+            {saveErrorMessage}
+          </p>
+        )}
         <button
           type="button"
           onClick={handleSaveToggle}
           disabled={isSaving}
           className={`
-            w-full font-semibold py-3.5 rounded-lg cursor-pointer whitespace-nowrap transition-colors
+            w-full rounded-lg py-3.5 text-sm font-semibold leading-5 cursor-pointer whitespace-nowrap transition-colors
             ${saved
               ? 'bg-background-100 text-foreground-700 border border-background-300 hover:bg-background-200'
               : 'bg-primary-500 text-background-50 hover:bg-primary-600'
@@ -263,7 +296,7 @@ export default function RecommendDetail() {
             href={product.officialUrl}
             target="_blank"
             rel="noreferrer"
-            className="mt-3 block w-full rounded-lg border border-background-300 py-3 text-center text-sm font-medium text-foreground-700"
+            className={`mt-3 ${secondaryButtonClassName}`}
           >
             공식 사이트 보기
           </a>
@@ -273,7 +306,7 @@ export default function RecommendDetail() {
           <button
             type="button"
             onClick={() => navigate('/recommend')}
-            className="w-full mt-3 border border-background-300 text-foreground-700 font-medium py-3 rounded-lg cursor-pointer whitespace-nowrap"
+            className={`mt-3 cursor-pointer whitespace-nowrap ${secondaryButtonClassName}`}
           >
             내 상품 리스트로 가기
           </button>

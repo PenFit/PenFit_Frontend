@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { createPensionPlan } from '../../../apis/plan';
 import { getMyPensionPassport } from '../../../apis/passport';
-import { getRehearsalProgress } from '../../../apis/simulation';
+import { getRehearsalProgress, retryRehearsalAnalysis } from '../../../apis/simulation';
+import { getStoredRehearsalId } from '../../../utils/rehearsalStorage';
 
 interface CheckItem {
   label: string;
@@ -16,34 +17,25 @@ const initialItems: CheckItem[] = [
   { label: '유지 가능한 연금계획 생성 중', status: 'pending' },
 ];
 
-const FAILED_STATUS_CODES = new Set([
-  'FAILED',
-  'FAIL',
-  'ERROR',
-  'ANALYSIS_FAILED',
-]);
+const REHEARSAL_STATUS = {
+  ANALYZING: 'ANALYZING',
+  FAILED: 'FAILED',
+  COMPLETED: 'COMPLETED',
+} as const;
 
 const MAX_POLL_COUNT = 40;
 const POLL_INTERVAL_MS = 3000;
+const MAX_FAILED_AFTER_RETRY_COUNT = 5;
 
-function getStoredRehearsalId() {
-  const storedRehearsal = sessionStorage.getItem('rehearsalStart');
-
-  if (!storedRehearsal) {
-    return null;
-  }
-
-  try {
-    const rehearsal = JSON.parse(storedRehearsal) as { rehearsalId?: number };
-
-    return rehearsal.rehearsalId ?? null;
-  } catch {
-    return null;
-  }
+interface LoadingErrorState {
+  code?: string;
+  message?: string;
 }
 
 export default function Loading() {
   const navigate = useNavigate();
+  const hasRequestedPlanRef = useRef(false);
+  const hasRetriedAnalysisRef = useRef(false);
 
   const [items, setItems] = useState<CheckItem[]>(initialItems);
   const [message, setMessage] = useState('당신의 연금 성향을 분석하고 있어요');
@@ -52,6 +44,7 @@ export default function Loading() {
     const rehearsalId = getStoredRehearsalId();
     let isMounted = true;
     let pollCount = 0;
+    let failedAfterRetryCount = 0;
     let pollTimer: number | undefined;
 
     if (!rehearsalId) {
@@ -59,18 +52,68 @@ export default function Loading() {
       return undefined;
     }
 
+    const navigateToError = (state?: LoadingErrorState) => {
+      navigate('/status/error', {
+        replace: true,
+        state,
+      });
+    };
+
     const pollAnalysis = async () => {
+      if (!isMounted) {
+        return;
+      }
+
       pollCount += 1;
 
       try {
         const progress = await getRehearsalProgress(rehearsalId);
 
-        sessionStorage.setItem('rehearsalAnswerStatus', JSON.stringify(progress));
-
-        if (FAILED_STATUS_CODES.has(progress.status.code)) {
-          navigate('/status/error', { replace: true });
+        if (!isMounted) {
           return;
         }
+
+        if (progress.status.code === REHEARSAL_STATUS.FAILED) {
+          console.error('리허설 AI 분석 실패 상태', progress);
+
+          if (!hasRetriedAnalysisRef.current) {
+            hasRetriedAnalysisRef.current = true;
+
+            try {
+              await retryRehearsalAnalysis(rehearsalId);
+            } catch (error) {
+              const errorData = isAxiosError(error) ? error.response?.data : undefined;
+              console.error('리허설 AI 분석 재시도 실패 응답', errorData);
+              navigateToError({
+                code: errorData?.code ?? progress.failureCode,
+                message: errorData?.message ?? progress.failureMessage,
+              });
+              return;
+            }
+
+            if (!isMounted) {
+              return;
+            }
+
+            pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
+            return;
+          }
+
+          failedAfterRetryCount += 1;
+
+          if (failedAfterRetryCount < MAX_FAILED_AFTER_RETRY_COUNT) {
+            pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
+            return;
+          }
+
+          navigateToError({
+            code: progress.failureCode || progress.status.code,
+            message: progress.failureMessage || `${progress.status.displayName} 상태가 계속 반환되고 있어요. 재시도 횟수: ${progress.retryCount}`,
+          });
+          return;
+        }
+
+        failedAfterRetryCount = 0;
 
         setItems([
           { label: '납입 행동 분석 중', status: 'done' },
@@ -78,14 +121,35 @@ export default function Loading() {
           { label: '유지 가능한 연금계획 생성 중', status: 'pending' },
         ]);
 
+        if (progress.status.code === REHEARSAL_STATUS.ANALYZING) {
+          if (pollCount < MAX_POLL_COUNT) {
+            pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
+            return;
+          }
+
+          navigateToError({
+            code: 'TIMEOUT',
+            message: '분석이 예상보다 오래 걸리고 있어요.',
+          });
+          return;
+        }
+
+        if (progress.status.code !== REHEARSAL_STATUS.COMPLETED) {
+          navigateToError({
+            code: progress.status.code,
+            message: progress.status.displayName,
+          });
+          return;
+        }
+
         try {
           const passport = await getMyPensionPassport();
 
-          if (passport.sustainableMonthlyContribution === 0) {
-            if (!isMounted) {
-              return;
-            }
+          if (!isMounted) {
+            return;
+          }
 
+          if (passport.sustainableMonthlyContribution === 0) {
             setItems([
               { label: '납입 행동 분석 중', status: 'done' },
               { label: '시장 대응 성향 분석 중', status: 'done' },
@@ -103,9 +167,10 @@ export default function Loading() {
           ]);
           setMessage('분석 결과를 바탕으로 연금계획을 만들고 있어요');
 
-          const plan = await createPensionPlan();
-
-          sessionStorage.setItem('pensionPlanResult', JSON.stringify(plan));
+          if (!hasRequestedPlanRef.current) {
+            hasRequestedPlanRef.current = true;
+            await createPensionPlan();
+          }
 
           if (!isMounted) {
             return;
@@ -120,11 +185,21 @@ export default function Loading() {
           navigate('/plan-result', { replace: true });
           return;
         } catch (error) {
+          if (!isMounted) {
+            return;
+          }
+
           if (isAxiosError(error) && error.response?.status === 404) {
             if (pollCount < MAX_POLL_COUNT) {
               pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
               return;
             }
+
+            navigateToError({
+              code: 'PP4041',
+              message: '연금 패스포트 생성이 아직 완료되지 않았어요.',
+            });
+            return;
           }
 
           if (isAxiosError(error)) {
@@ -137,19 +212,29 @@ export default function Loading() {
           }
 
           console.error('패스포트 조회 또는 연금 계획 생성에 실패했어요.', error);
-          navigate('/status/error', { replace: true });
+          navigateToError({
+            code: isAxiosError(error) ? error.response?.data?.code : undefined,
+            message: isAxiosError(error) ? error.response?.data?.message : undefined,
+          });
           return;
         }
       } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
         if (isAxiosError(error)) {
           console.error('리허설 분석 상태 조회 실패 응답', error.response?.data);
         }
         console.error('리허설 분석 상태 조회에 실패했어요.', error);
-        navigate('/status/error', { replace: true });
+        navigateToError({
+          code: isAxiosError(error) ? error.response?.data?.code : undefined,
+          message: isAxiosError(error) ? error.response?.data?.message : undefined,
+        });
       }
     };
 
-    pollAnalysis();
+    pollTimer = window.setTimeout(pollAnalysis, 0);
 
     return () => {
       isMounted = false;

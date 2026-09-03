@@ -45,6 +45,8 @@ export default function Mission() {
     enabled: agreed,
     retry: false,
   });
+  const currentMissionTopCategoryName = currentMission?.topCategory?.displayName ?? '주요 지출';
+  const currentMissionTopCategoryRatio = currentMission?.topCategoryRatio ?? 0;
 
   const {
     data: completions,
@@ -59,8 +61,8 @@ export default function Mission() {
     const fetchMyInformation = async () => {
       try {
         const myInformation = await getMyInformation();
-        setEmail(myInformation.email);
-        setAgreed(myInformation.emailConsent);
+        setEmail(typeof myInformation.email === 'string' ? myInformation.email : '');
+        setAgreed(myInformation.emailConsent === true);
       } catch (error) {
         console.error('이메일 정보 조회에 실패했어요.', error);
       }
@@ -88,7 +90,7 @@ export default function Mission() {
       const updatedUser = await updateEmailConsent(true);
       await createSpendingAnalysis();
 
-      setEmail(updatedUser.email);
+      setEmail(updatedUser.email ?? '');
       setAgreed(true);
       queryClient.invalidateQueries({ queryKey: ['currentBehaviorMission'] });
       queryClient.invalidateQueries({ queryKey: ['spendingAnalysis'] });
@@ -266,7 +268,7 @@ export default function Mission() {
               </div>
               <p className="text-sm text-foreground-600 mt-2">
                 {currentMission
-                  ? `최근 7일 ${currentMission.topCategory.displayName} 지출에서 줄일 수 있는 부분을 찾아봤어요.`
+                  ? `최근 7일 ${currentMissionTopCategoryName} 지출에서 줄일 수 있는 부분을 찾아봤어요.`
                   : '최근 7일 분석 결과가 만들어지면 절약할 수 있는 부분을 확인할 수 있어요.'}
               </p>
               <p className="text-sm font-semibold text-primary-500 mt-1.5 group-hover:text-primary-600 transition-colors flex items-center gap-1">
@@ -303,8 +305,8 @@ export default function Mission() {
 
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   <div className="bg-background-100 rounded-lg p-2.5 text-center">
-                    <p className="text-xs text-foreground-400 mb-1">{currentMission.topCategory.displayName}</p>
-                    <p className="text-base font-bold text-foreground-950">{currentMission.topCategoryRatio}%</p>
+                    <p className="text-xs text-foreground-400 mb-1">{currentMissionTopCategoryName}</p>
+                    <p className="text-base font-bold text-foreground-950">{currentMissionTopCategoryRatio}%</p>
                     <p className="text-[10px] text-foreground-400">주요 지출</p>
                   </div>
                   <div className="bg-background-100 rounded-lg p-2.5 text-center">
@@ -349,16 +351,16 @@ export default function Mission() {
                 올해 완료한 미션
               </h3>
               <div className="rounded-xl bg-background-100 p-4">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <div className="rounded-lg bg-background-50 px-3 py-3">
                     <p className="text-xs text-foreground-400">완료</p>
                     <p className="text-base font-bold text-foreground-950">{completions.completedCount}개</p>
                   </div>
-                  <div>
+                  <div className="rounded-lg bg-background-50 px-3 py-3">
                     <p className="text-xs text-foreground-400">절약</p>
                     <p className="text-base font-bold text-primary-600">{formatWon(completions.totalSavedAmount)}</p>
                   </div>
-                  <div>
+                  <div className="col-span-2 rounded-lg bg-background-50 px-3 py-3">
                     <p className="text-xs text-foreground-400">연금 효과</p>
                     <p className="text-base font-bold text-accent-600">{formatWon(completions.totalPensionImpactAmount)}</p>
                   </div>

@@ -3,7 +3,7 @@ import apiClient from "./client";
 export interface UserMe {
   userId: number;
   nickname: string;
-  email: string;
+  email: string | null;
   emailConsent: boolean;
   loginProvider: string;
 }
