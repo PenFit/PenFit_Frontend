@@ -1,14 +1,57 @@
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { getProductRecommendationComparison } from '../../../apis/recommend';
+import {
+  getPensionProductDetail,
+  getProductRecommendationComparison,
+  type ProductRecommendationComparison,
+} from '../../../apis/recommend';
 import BottomNav from '../../../components/BottomNav';
+import { getStoredProductRecommendations } from '../recommendationStorage';
 
 const compareCriteria = [
   { key: 'fee', label: '수수료' },
   { key: 'investmentScope', label: '투자상품 선택 범위' },
   { key: 'fitLevel', label: '적합도' },
 ];
+
+async function getComparisonWithFallback(): Promise<ProductRecommendationComparison> {
+  try {
+    return await getProductRecommendationComparison();
+  } catch (error) {
+    if (!isAxiosError(error) || error.response?.status !== 404) {
+      throw error;
+    }
+
+    const storedRecommendations = getStoredProductRecommendations()
+      .slice()
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, 3);
+
+    if (storedRecommendations.length === 0) {
+      throw error;
+    }
+
+    const products = await Promise.all(
+      storedRecommendations.map(async (recommendation) => {
+        const detail = await getPensionProductDetail(recommendation.productId);
+
+        return {
+          rank: recommendation.rank,
+          productId: recommendation.productId,
+          providerName: detail.providerName,
+          productName: detail.productName,
+          feeMinRate: detail.feeMinRate,
+          feeMaxRate: detail.feeMaxRate,
+          investmentScope: detail.investmentScope,
+          fitLevel: recommendation.fitLevel,
+        };
+      }),
+    );
+
+    return { products };
+  }
+}
 
 export default function RecommendCompare() {
   const navigate = useNavigate();
@@ -19,7 +62,8 @@ export default function RecommendCompare() {
     error,
   } = useQuery({
     queryKey: ['productRecommendationComparison'],
-    queryFn: getProductRecommendationComparison,
+    queryFn: getComparisonWithFallback,
+    retry: false,
   });
 
   const products = comparison?.products
