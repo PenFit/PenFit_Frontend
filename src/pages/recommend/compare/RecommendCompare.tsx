@@ -28,61 +28,81 @@ function getSavedAtTime(savedAt: string) {
   return Number.isFinite(savedAtTime) ? savedAtTime : Number.MAX_SAFE_INTEGER;
 }
 
+async function getComparisonFromStoredRecommendations() {
+  const storedRecommendations = getStoredProductRecommendations()
+    .slice()
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 3);
+
+  if (storedRecommendations.length === 0) {
+    return null;
+  }
+
+  const products = await Promise.all(
+    storedRecommendations.map(async (recommendation) => {
+      const detail = await getPensionProductDetail(recommendation.productId);
+
+      return {
+        rank: recommendation.rank,
+        productId: recommendation.productId,
+        providerName: detail.providerName,
+        productName: detail.productName,
+        feeMinRate: detail.feeMinRate,
+        feeMaxRate: detail.feeMaxRate,
+        investmentScope: detail.investmentScope,
+        fitLevel: recommendation.fitLevel,
+      };
+    }),
+  );
+
+  return { products };
+}
+
+async function getComparisonFromSavedProducts() {
+  const savedProducts = await getMySavedProducts();
+  const products: ProductRecommendationComparisonItem[] = savedProducts
+    .slice()
+    .sort((a, b) => getSavedAtTime(a.savedAt) - getSavedAtTime(b.savedAt))
+    .slice(0, 3)
+    .map((product, index) => ({
+      rank: index + 1,
+      productId: product.productId,
+      providerName: product.providerName,
+      productName: product.productName,
+      feeMinRate: product.feeMinRate,
+      feeMaxRate: product.feeMaxRate,
+      investmentScope: product.investmentScope,
+      fitLevel: SAVED_PRODUCT_FIT_LEVEL,
+    }));
+
+  return products.length > 0 ? { products } : null;
+}
+
 async function getComparisonWithFallback(): Promise<ProductRecommendationComparison> {
+  const storedComparison = await getComparisonFromStoredRecommendations();
+
+  if (storedComparison) {
+    return storedComparison;
+  }
+
+  const savedProductsComparison = await getComparisonFromSavedProducts();
+
+  if (savedProductsComparison) {
+    return savedProductsComparison;
+  }
+
   try {
     return await getProductRecommendationComparison();
   } catch (error) {
-    if (!isAxiosError(error) || error.response?.status !== 404) {
-      throw error;
+    if (isAxiosError(error) && error.response?.status === 404) {
+      const fallbackComparison = await getComparisonFromSavedProducts();
+
+      if (fallbackComparison) {
+        return fallbackComparison;
+      }
     }
 
-    const storedRecommendations = getStoredProductRecommendations()
-      .slice()
-      .sort((a, b) => a.rank - b.rank)
-      .slice(0, 3);
-
-    if (storedRecommendations.length > 0) {
-      const products = await Promise.all(
-        storedRecommendations.map(async (recommendation) => {
-          const detail = await getPensionProductDetail(recommendation.productId);
-
-          return {
-            rank: recommendation.rank,
-            productId: recommendation.productId,
-            providerName: detail.providerName,
-            productName: detail.productName,
-            feeMinRate: detail.feeMinRate,
-            feeMaxRate: detail.feeMaxRate,
-            investmentScope: detail.investmentScope,
-            fitLevel: recommendation.fitLevel,
-          };
-        }),
-      );
-
-      return { products };
-    }
-
-    const savedProducts = await getMySavedProducts();
-    const products: ProductRecommendationComparisonItem[] = savedProducts
-      .slice()
-      .sort((a, b) => getSavedAtTime(a.savedAt) - getSavedAtTime(b.savedAt))
-      .slice(0, 3)
-      .map((product, index) => ({
-        rank: index + 1,
-        productId: product.productId,
-        providerName: product.providerName,
-        productName: product.productName,
-        feeMinRate: product.feeMinRate,
-        feeMaxRate: product.feeMaxRate,
-        investmentScope: product.investmentScope,
-        fitLevel: SAVED_PRODUCT_FIT_LEVEL,
-      }));
-
-    if (products.length === 0) {
-      throw error;
-    }
-
-    return { products };
+    throw error;
   }
 }
 

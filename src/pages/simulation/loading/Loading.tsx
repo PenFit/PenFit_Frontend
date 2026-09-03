@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPensionPlan } from '../../../apis/plan';
 import { getMyPensionPassport } from '../../../apis/passport';
 import { getRehearsalProgress, retryRehearsalAnalysis } from '../../../apis/simulation';
+import { getAiErrorPolicy, shouldAutoRetryAiError } from '../../../utils/aiErrorPolicy';
 import { getStoredRehearsalId } from '../../../utils/rehearsalStorage';
 
 interface CheckItem {
@@ -25,7 +26,7 @@ const REHEARSAL_STATUS = {
 
 const MAX_POLL_COUNT = 40;
 const POLL_INTERVAL_MS = 3000;
-const MAX_FAILED_AFTER_RETRY_COUNT = 5;
+const AUTO_RETRY_DELAY_MS = 8000;
 
 interface LoadingErrorState {
   code?: string;
@@ -39,12 +40,12 @@ export default function Loading() {
 
   const [items, setItems] = useState<CheckItem[]>(initialItems);
   const [message, setMessage] = useState('당신의 연금 성향을 분석하고 있어요');
+  const [description, setDescription] = useState('방금 선택한 행동을 바탕으로');
 
   useEffect(() => {
     const rehearsalId = getStoredRehearsalId();
     let isMounted = true;
     let pollCount = 0;
-    let failedAfterRetryCount = 0;
     let pollTimer: number | undefined;
 
     if (!rehearsalId) {
@@ -75,45 +76,47 @@ export default function Loading() {
 
         if (progress.status.code === REHEARSAL_STATUS.FAILED) {
           console.error('리허설 AI 분석 실패 상태', progress);
+          const failureCode = progress.failureCode || progress.status.code;
+          const failurePolicy = getAiErrorPolicy(failureCode);
 
-          if (!hasRetriedAnalysisRef.current) {
-            hasRetriedAnalysisRef.current = true;
-
-            try {
-              await retryRehearsalAnalysis(rehearsalId);
-            } catch (error) {
-              const errorData = isAxiosError(error) ? error.response?.data : undefined;
-              console.error('리허설 AI 분석 재시도 실패 응답', errorData);
-              navigateToError({
-                code: errorData?.code ?? progress.failureCode,
-                message: errorData?.message ?? progress.failureMessage,
-              });
-              return;
-            }
-
-            if (!isMounted) {
-              return;
-            }
-
-            pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
-            return;
+          if (failurePolicy?.loadingMessage) {
+            setMessage(failurePolicy.loadingMessage);
           }
 
-          failedAfterRetryCount += 1;
+          if (failurePolicy?.loadingDescription) {
+            setDescription(failurePolicy.loadingDescription);
+          }
 
-          if (failedAfterRetryCount < MAX_FAILED_AFTER_RETRY_COUNT) {
-            pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
+          if (shouldAutoRetryAiError(failureCode) && !hasRetriedAnalysisRef.current) {
+            hasRetriedAnalysisRef.current = true;
+
+            pollTimer = window.setTimeout(async () => {
+              try {
+                await retryRehearsalAnalysis(rehearsalId);
+              } catch (error) {
+                const errorData = isAxiosError(error) ? error.response?.data : undefined;
+                console.error('리허설 AI 분석 재시도 실패 응답', errorData);
+                navigateToError({
+                  code: errorData?.code ?? failureCode,
+                  message: errorData?.message ?? progress.failureMessage,
+                });
+                return;
+              }
+
+              pollAnalysis();
+            }, AUTO_RETRY_DELAY_MS);
             return;
           }
 
           navigateToError({
-            code: progress.failureCode || progress.status.code,
-            message: progress.failureMessage || `${progress.status.displayName} 상태가 계속 반환되고 있어요. 재시도 횟수: ${progress.retryCount}`,
+            code: failureCode,
+            message:
+              failurePolicy?.errorDescription ??
+              progress.failureMessage ??
+              `${progress.status.displayName} 상태가 계속 반환되고 있어요. 재시도 횟수: ${progress.retryCount}`,
           });
           return;
         }
-
-        failedAfterRetryCount = 0;
 
         setItems([
           { label: '납입 행동 분석 중', status: 'done' },
@@ -205,6 +208,16 @@ export default function Loading() {
           if (isAxiosError(error)) {
             console.error('패스포트 조회 또는 연금 계획 생성 실패 응답', error.response?.data);
 
+            if (error.response?.data?.code === 'PN4092') {
+              setItems([
+                { label: '납입 행동 분석 중', status: 'done' },
+                { label: '시장 대응 성향 분석 중', status: 'done' },
+                { label: '유지 가능한 연금계획 생성 중', status: 'done' },
+              ]);
+              navigate('/plan-result', { replace: true });
+              return;
+            }
+
             if (error.response?.data?.code === 'PN4221') {
               navigate('/status/empty', { replace: true });
               return;
@@ -254,7 +267,7 @@ export default function Loading() {
               AI가 분석 중이에요
             </h1>
             <p className="text-sm text-foreground-500 leading-relaxed animate-fade-in">
-              방금 선택한 행동을 바탕으로
+              {description}
               <br />
               {message}
             </p>

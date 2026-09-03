@@ -65,7 +65,7 @@ export default function StatusScreen({
           </h1>
 
           {/* 설명 */}
-          <p className="text-sm text-foreground-600 text-center leading-relaxed mb-10 max-w-70 animate-fade-in">
+          <p className="whitespace-pre-line text-sm text-foreground-600 text-center leading-relaxed mb-10 max-w-70 animate-fade-in">
             {description}
           </p>
 
