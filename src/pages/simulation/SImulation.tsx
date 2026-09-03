@@ -63,6 +63,8 @@ export default function Simulation() {
 
   const isLast = stepNum === total;
   const nextPath = isLast ? '/loading' : `/simulation/${stepNum + 1}`;
+  const previousPath = `/simulation/${stepNum - 1}`;
+  const canGoPrevious = stepNum > 1 && !isSavingAnswer;
 
   const handleNext = async () => {
     if (!selected || !simulation.scenarioCode || isSavingAnswer || isSavingAnswerRef.current) {
@@ -197,27 +199,40 @@ export default function Simulation() {
           </div>
         </div>
 
-        {/* 다음 버튼 */}
+        {/* 이동 버튼 */}
         <div className="px-6 py-5 shrink-0 bg-background-50 border-t border-background-100">
           {errorMessage && (
             <p className="mb-3 text-center text-sm font-medium text-accent-600">
               {errorMessage}
             </p>
           )}
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={!selected || isSavingAnswer}
-            className={`
-              w-full font-semibold py-4 rounded-lg transition-colors whitespace-nowrap
-              ${selected && !isSavingAnswer
-                ? 'bg-primary-500 hover:bg-primary-600 text-background-50'
-                : 'bg-background-200 text-foreground-400 cursor-not-allowed'
-              }
-            `}
-          >
-            {isSavingAnswer ? (isLast ? '분석 요청 중' : '저장 중') : isLast ? '분석 시작하기' : '다음 단계'}
-          </button>
+          <div className="grid grid-cols-[0.75fr_1.25fr] gap-3">
+            {stepNum > 1 && (
+              <button
+                type="button"
+                onClick={() => navigate(previousPath)}
+                disabled={!canGoPrevious}
+                className="rounded-lg border border-background-300 py-4 text-sm font-semibold text-foreground-700 transition-colors hover:bg-background-100 disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+              >
+                이전
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!selected || isSavingAnswer}
+              className={`
+                font-semibold py-4 rounded-lg transition-colors whitespace-nowrap
+                ${stepNum === 1 ? 'col-span-2 w-full' : 'w-full'}
+                ${selected && !isSavingAnswer
+                  ? 'bg-primary-500 hover:bg-primary-600 text-background-50'
+                  : 'bg-background-200 text-foreground-400 cursor-not-allowed'
+                }
+              `}
+            >
+              {isSavingAnswer ? (isLast ? '분석 요청 중' : '저장 중') : isLast ? '분석 시작하기' : '다음 단계'}
+            </button>
+          </div>
         </div>
     </>
   );
