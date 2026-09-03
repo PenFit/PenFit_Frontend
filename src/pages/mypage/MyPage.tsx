@@ -15,6 +15,20 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function getLoginProviderLabel(loginProvider?: string) {
+  const normalizedProvider = loginProvider?.toLowerCase() ?? '';
+
+  if (normalizedProvider.includes('demo')) {
+    return '심사용 데모 로그인';
+  }
+
+  if (normalizedProvider === 'kakao') {
+    return '카카오 로그인';
+  }
+
+  return loginProvider ?? '로그인 정보';
+}
+
 export default function MyPage() {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState<UserMe | null>(null);
@@ -28,6 +42,7 @@ export default function MyPage() {
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [unsubscribed, setUnsubscribed] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isDeletingEmail, setIsDeletingEmail] = useState(false);
@@ -142,6 +157,31 @@ export default function MyPage() {
     }
   };
 
+  const handleSubscribeEmail = async () => {
+    if (isUpdatingEmailConsent) {
+      return;
+    }
+
+    if (!userInfo?.email) {
+      openEmailModal();
+      setIsEditingEmail(true);
+      return;
+    }
+
+    setIsUpdatingEmailConsent(true);
+
+    try {
+      const updatedUser = await updateEmailConsent(true);
+      setUserInfo(updatedUser);
+      setSubscribed(true);
+      window.setTimeout(() => setSubscribed(false), 2500);
+    } catch (error) {
+      console.error('이메일 수신 동의에 실패했어요.', error);
+    } finally {
+      setIsUpdatingEmailConsent(false);
+    }
+  };
+
   const handleUpdateNickname = async () => {
     const nextNickname = nicknameInput.trim();
 
@@ -187,9 +227,9 @@ export default function MyPage() {
 
   const secondaryItems: MenuItem[] = [
     {
-      icon: 'ri-mail-close-line',
-      title: '이메일 수신 거부',
-      action: () => setShowUnsubscribe(true),
+      icon: userInfo?.emailConsent ? 'ri-mail-close-line' : 'ri-mail-check-line',
+      title: userInfo?.emailConsent ? '이메일 수신 거부' : '이메일 수신 동의',
+      action: userInfo?.emailConsent ? () => setShowUnsubscribe(true) : handleSubscribeEmail,
       variant: 'default',
     },
     {
@@ -201,10 +241,7 @@ export default function MyPage() {
   ];
 
   const profileInitial = nickname.trim().charAt(0) || '사';
-  const loginProviderLabel =
-    userInfo?.loginProvider.toLowerCase() === 'kakao'
-      ? '카카오 로그인'
-      : userInfo?.loginProvider ?? '로그인 정보';
+  const loginProviderLabel = getLoginProviderLabel(userInfo?.loginProvider);
   const userEmail = userInfo?.email ?? '이메일 정보를 불러오는 중이에요';
   const hasEmail = Boolean(userInfo?.email);
   const emailConsentLabel = userInfo?.emailConsent ? '수신 동의' : '수신 미동의';
@@ -348,6 +385,16 @@ export default function MyPage() {
 	                <p className="mt-2 text-xs text-foreground-500">
 	                  이메일 리포트 {emailConsentLabel}
 	                </p>
+                  {!isEditingEmail && hasEmail && !userInfo?.emailConsent && (
+                    <button
+                      type="button"
+                      onClick={handleSubscribeEmail}
+                      disabled={isUpdatingEmailConsent}
+                      className="mt-3 w-full rounded-lg bg-primary-500 py-3 text-sm font-semibold text-background-50 transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isUpdatingEmailConsent ? '처리 중' : '이메일 리포트 수신 동의하기'}
+                    </button>
+                  )}
 	                {visibleEmailErrorMessage && (
 	                  <p className="mt-2 text-xs text-accent-600">
 	                    {visibleEmailErrorMessage}
@@ -520,6 +567,18 @@ export default function MyPage() {
               <i className="ri-checkbox-circle-line text-secondary-400 text-lg w-5 h-5 flex items-center justify-center" />
               <span className="text-sm font-semibold">
                 이메일 수신 거부가 완료됐어요
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 수신 동의 토스트 */}
+        {subscribed && (
+          <div className="absolute inset-x-6 bottom-24 z-40 animate-fade-in">
+            <div className="bg-foreground-950 text-background-50 rounded-xl px-4 py-3 flex items-center gap-3">
+              <i className="ri-checkbox-circle-line text-secondary-400 text-lg w-5 h-5 flex items-center justify-center" />
+              <span className="text-sm font-semibold">
+                이메일 수신 동의가 완료됐어요
               </span>
             </div>
           </div>
