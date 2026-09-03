@@ -130,13 +130,19 @@ export default function RecommendDetail() {
     );
   }
 
+  const providerTypeName = product.providerType?.displayName ?? '금융사';
+  const accountTypeName = product.accountType?.displayName ?? '-';
+  const productTypeName = product.productType?.displayName ?? '-';
+  const features = Array.isArray(product.features) ? product.features : [];
+  const cautions = Array.isArray(product.cautions) ? product.cautions : [];
+
   return (
     <>
         <div className="flex-1 overflow-y-auto pb-24">
       {/* 헤더 */}
       <div className="px-5 pt-6 pb-4">
         <span className="text-xs text-foreground-500">
-          {product.providerType.displayName} · {product.providerName}
+          {providerTypeName} · {product.providerName}
         </span>
         <h1 className="text-xl font-bold text-foreground-950 mt-0.5">
           {product.productName}
@@ -177,13 +183,13 @@ export default function RecommendDetail() {
             <div className="flex items-center justify-between rounded-lg bg-background-100 px-3 py-2">
               <span className="text-sm text-foreground-600">계좌 유형</span>
               <span className="text-sm font-semibold text-foreground-950">
-                {product.accountType.displayName}
+                {accountTypeName}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-background-100 px-3 py-2">
               <span className="text-sm text-foreground-600">상품 유형</span>
               <span className="text-sm font-semibold text-foreground-950">
-                {product.productType.displayName}
+                {productTypeName}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-background-100 px-3 py-2">
@@ -214,14 +220,20 @@ export default function RecommendDetail() {
           <h2 className="text-sm font-bold text-foreground-800 mb-3">
             주요 특징
           </h2>
-          <ul className="space-y-2">
-            {product.features.map((feature, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <i className="ri-check-line text-primary-500 mt-0.5" />
-                <span className="text-sm text-foreground-700">{feature}</span>
-              </li>
-            ))}
-          </ul>
+          {features.length > 0 ? (
+            <ul className="space-y-2">
+              {features.map((feature, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <i className="ri-check-line text-primary-500 mt-0.5" />
+                  <span className="text-sm text-foreground-700">{feature}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-foreground-500">
+              주요 특징 정보가 아직 없어요.
+            </p>
+          )}
         </div>
       </div>
 
@@ -231,14 +243,20 @@ export default function RecommendDetail() {
           <h2 className="text-sm font-bold text-accent-900 mb-3">
             주의사항
           </h2>
-          <ul className="space-y-2">
-            {product.cautions.map((caution, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <i className="ri-error-warning-line text-accent-500 mt-0.5" />
-                <span className="text-sm text-accent-800">{caution}</span>
-              </li>
-            ))}
-          </ul>
+          {cautions.length > 0 ? (
+            <ul className="space-y-2">
+              {cautions.map((caution, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <i className="ri-error-warning-line text-accent-500 mt-0.5" />
+                  <span className="text-sm text-accent-800">{caution}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-accent-800">
+              별도 주의사항 정보가 아직 없어요.
+            </p>
+          )}
         </div>
       </div>
 

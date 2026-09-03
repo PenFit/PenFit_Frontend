@@ -77,7 +77,13 @@ export default function PlanResult() {
     );
   }
 
-  const { assetAllocation } = plan;
+  const assetAllocation = plan.assetAllocation ?? {
+    stockRatio: 0,
+    bondRatio: 0,
+    depositRatio: 0,
+  };
+  const accountTypeName = plan.accountType?.displayName ?? '-';
+  const advantages = Array.isArray(plan.advantages) ? plan.advantages : [];
 
   return (
     <>
@@ -131,7 +137,7 @@ export default function PlanResult() {
               <div>
                 <p className="mb-1 text-xs font-medium text-foreground-500">추천 계좌</p>
                 <p className="text-base font-bold text-foreground-950">
-                  {plan.accountType.displayName}
+                  {accountTypeName}
                 </p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-background-100 text-secondary-600">
@@ -199,14 +205,20 @@ export default function PlanResult() {
             이 계획의 장점
           </h3>
           <div className="space-y-3 rounded-2xl bg-background-100 p-4">
-            {plan.advantages.map((advantage) => (
-              <div key={advantage} className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center shrink-0 mt-0.5">
-                  <i className="ri-check-line text-background-50 text-xs w-3 h-3 flex items-center justify-center" />
+            {advantages.length > 0 ? (
+              advantages.map((advantage) => (
+                <div key={advantage} className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center shrink-0 mt-0.5">
+                    <i className="ri-check-line text-background-50 text-xs w-3 h-3 flex items-center justify-center" />
+                  </div>
+                  <p className="text-sm text-foreground-700">{advantage}</p>
                 </div>
-                <p className="text-sm text-foreground-700">{advantage}</p>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-foreground-500">
+                계획 장점 정보가 아직 없어요.
+              </p>
+            )}
           </div>
           <div className="mt-4 bg-background-200 rounded-xl p-3">
             <p className="text-xs text-foreground-500 text-center">

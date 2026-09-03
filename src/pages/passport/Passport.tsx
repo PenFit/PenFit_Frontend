@@ -69,6 +69,14 @@ export default function Passport() {
     );
   }
 
+  const passportTypeName = passport.type?.displayName ?? '연금 성향';
+  const passportTypeSummary = passport.typeSummary ?? '연금 성향 요약 정보가 아직 없어요.';
+  const biggestInterruptionRiskName = passport.biggestInterruptionRisk?.displayName ?? '-';
+  const marketRiskLevelName = passport.marketRiskLevel?.displayName ?? '-';
+  const summary = passport.summary ?? 'AI 분석 요약 정보가 아직 없어요.';
+  const judgmentReason = passport.judgmentReason ?? '판단 이유 정보가 아직 없어요.';
+  const detailedAnalysisReport = passport.detailedAnalysisReport ?? '세부 분석 정보가 아직 없어요.';
+
   return (
     <>
         <div className="flex-1 overflow-y-auto pb-24">
@@ -78,7 +86,7 @@ export default function Passport() {
               연금 패스포트
             </h1>
             <p className="text-sm text-foreground-500">
-              {passport.type.displayName}
+              {passportTypeName}
             </p>
           </div>
 
@@ -134,13 +142,13 @@ export default function Passport() {
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-xs text-foreground-500 mb-1">가장 큰 흐름 위험</p>
                   <p className="text-base font-bold text-accent-600">
-                    {passport.biggestInterruptionRisk.displayName}
+                    {biggestInterruptionRiskName}
                   </p>
                 </div>
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-xs text-foreground-500 mb-1">시장 위험도</p>
                   <p className="text-base font-bold text-primary-600">
-                    {passport.marketRiskLevel.displayName}
+                    {marketRiskLevelName}
                   </p>
                 </div>
               </div>
@@ -148,10 +156,10 @@ export default function Passport() {
               <div className="px-6 pb-6">
                 <div className="rounded-xl bg-primary-50 p-4">
                   <p className="mb-1 text-sm font-bold text-primary-700">
-                    {passport.type.displayName}
+                    {passportTypeName}
                   </p>
 	                  <p className="text-sm leading-relaxed text-foreground-700">
-	                    {passport.typeSummary}
+	                    {passportTypeSummary}
 	                  </p>
                 </div>
               </div>
@@ -163,7 +171,7 @@ export default function Passport() {
                 </h3>
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-sm text-foreground-700 leading-relaxed mb-3">
-                    {passport.summary}
+                    {summary}
                   </p>
                   <button
                     type="button"
@@ -182,13 +190,13 @@ export default function Passport() {
               <div className="rounded-xl bg-background-100 p-4">
                 <p className="mb-2 text-sm font-bold text-foreground-950">판단 이유</p>
                 <p className="text-sm leading-relaxed text-foreground-700">
-                  {passport.judgmentReason}
+                  {judgmentReason}
                 </p>
               </div>
 
 	              <div className="rounded-xl border border-background-200 bg-background-50 p-4">
 	                <p className="whitespace-pre-line text-sm leading-relaxed text-foreground-600">
-	                  {passport.detailedAnalysisReport}
+	                  {detailedAnalysisReport}
 	                </p>
 	              </div>
 	            </div>
