@@ -82,35 +82,62 @@ export default function PlanResult() {
   return (
     <>
       <div className="flex-1 overflow-y-auto pb-24">
-        {/* 헤더 */}
-        <div className="px-6 pt-6 pb-2">
-          <h1 className="text-xl font-bold text-foreground-950 font-heading">
-            {plan.planName}
-          </h1>
-          <p className="text-sm text-foreground-500">
-            {plan.recommendationReason}
-          </p>
-        </div>
+        <section className="px-6 pb-5 pt-6">
+          <div className="rounded-2xl border border-primary-100 bg-primary-50 p-5 shadow-sm">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="mb-1 text-xs font-medium text-primary-700">
+                  맞춤 연금 계획
+                </p>
+                <h1 className="font-heading text-2xl font-bold leading-tight text-foreground-950">
+                  {plan.planName}
+                </h1>
+              </div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-500">
+                <i className="ri-sparkling-2-line flex h-6 w-6 items-center justify-center text-xl" />
+              </div>
+            </div>
 
-        {/* 요약 */}
-        <div className="px-6 pb-4 grid grid-cols-3 gap-3">
-          <div className="bg-background-100 rounded-xl p-4 text-center">
-            <p className="text-xs text-foreground-500 mb-1">월 납입액</p>
-            <p className="text-base font-bold text-foreground-950">
+            <p className="text-sm leading-relaxed text-foreground-700">
+              {plan.recommendationReason}
+            </p>
+          </div>
+        </section>
+
+        {/* 핵심 지표 */}
+        <div className="grid grid-cols-2 gap-3 px-6 pb-5">
+          <div className="rounded-2xl bg-primary-50 p-4">
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-primary-500 text-background-50">
+              <i className="ri-wallet-3-line flex h-5 w-5 items-center justify-center text-lg" />
+            </div>
+            <p className="mb-1 text-xs font-medium text-primary-700">월 납입액</p>
+            <p className="text-xl font-bold text-foreground-950">
               {formatWon(plan.monthlyContribution)}
             </p>
           </div>
-          <div className="bg-background-100 rounded-xl p-4 text-center">
-            <p className="text-xs text-foreground-500 mb-1">{plan.contributionYears}년 예상</p>
-            <p className="text-base font-bold text-primary-600">
+          <div className="rounded-2xl bg-background-100 p-4">
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-secondary-500 text-background-50">
+              <i className="ri-line-chart-line flex h-5 w-5 items-center justify-center text-lg" />
+            </div>
+            <p className="mb-1 text-xs font-medium text-foreground-500">
+              {plan.contributionYears}년 예상
+            </p>
+            <p className="text-lg font-bold leading-tight text-primary-600">
               {formatKoreanAsset(plan.expectedFutureAsset)}
             </p>
           </div>
-          <div className="bg-background-100 rounded-xl p-4 text-center">
-            <p className="text-xs text-foreground-500 mb-1">계좌</p>
-            <p className="text-sm font-semibold text-foreground-950">
-              {plan.accountType.displayName}
-            </p>
+          <div className="col-span-2 rounded-2xl border border-background-200 bg-background-50 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="mb-1 text-xs font-medium text-foreground-500">추천 계좌</p>
+                <p className="text-base font-bold text-foreground-950">
+                  {plan.accountType.displayName}
+                </p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-background-100 text-secondary-600">
+                <i className="ri-bank-card-line flex h-5 w-5 items-center justify-center text-lg" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -119,7 +146,7 @@ export default function PlanResult() {
           <h3 className="text-base font-bold text-foreground-950 mb-3">
             자산 구성
           </h3>
-          <div className="bg-background-100 rounded-xl p-4">
+          <div className="rounded-2xl bg-background-100 p-4">
             <div className="flex gap-1 mb-4">
               <div
                 className="h-3 rounded-full bg-primary-500"
@@ -171,7 +198,7 @@ export default function PlanResult() {
           <h3 className="text-base font-bold text-foreground-950 mb-3">
             이 계획의 장점
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-2xl bg-background-100 p-4">
             {plan.advantages.map((advantage) => (
               <div key={advantage} className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center shrink-0 mt-0.5">
@@ -186,6 +213,17 @@ export default function PlanResult() {
               이 계획은 예상치일 뿐 실제 수익률과 다를 수 있어요
             </p>
           </div>
+        </div>
+
+        <div className="px-6">
+          <button
+            type="button"
+            onClick={() => navigate('/home')}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-500 py-4 text-sm font-semibold text-background-50 transition-colors hover:bg-primary-600"
+          >
+            <i className="ri-home-5-line flex h-5 w-5 items-center justify-center text-lg" />
+            홈으로 가기
+          </button>
         </div>
       </div>
 
