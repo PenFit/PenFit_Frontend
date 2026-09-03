@@ -349,16 +349,16 @@ export default function Mission() {
                 올해 완료한 미션
               </h3>
               <div className="rounded-xl bg-background-100 p-4">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <div className="rounded-lg bg-background-50 px-3 py-3">
                     <p className="text-xs text-foreground-400">완료</p>
                     <p className="text-base font-bold text-foreground-950">{completions.completedCount}개</p>
                   </div>
-                  <div>
+                  <div className="rounded-lg bg-background-50 px-3 py-3">
                     <p className="text-xs text-foreground-400">절약</p>
                     <p className="text-base font-bold text-primary-600">{formatWon(completions.totalSavedAmount)}</p>
                   </div>
-                  <div>
+                  <div className="col-span-2 rounded-lg bg-background-50 px-3 py-3">
                     <p className="text-xs text-foreground-400">연금 효과</p>
                     <p className="text-base font-bold text-accent-600">{formatWon(completions.totalPensionImpactAmount)}</p>
                   </div>
