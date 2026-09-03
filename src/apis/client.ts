@@ -17,7 +17,7 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 // 일반 API 요청에 사용하는 공통 axios 인스턴스
 const apiClient = axios.create({
