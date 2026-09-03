@@ -45,6 +45,9 @@ export default function RecommendMain() {
   const errorMessage = isAxiosError(error)
     ? error.response?.data?.message
     : undefined;
+  const sortedSavedProducts = savedProducts
+    .slice()
+    .sort((a, b) => new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime());
 
   return (
     <>
@@ -59,7 +62,7 @@ export default function RecommendMain() {
             관심 있는 연금 상품을 모아서 비교하고 상세 정보를 확인하세요
           </p>
         </div>
-        {savedProducts.length > 0 && (
+        {sortedSavedProducts.length > 0 && (
           <button
             type="button"
             onClick={() => navigate('/recommend/start')}
@@ -87,7 +90,7 @@ export default function RecommendMain() {
         </div>
       )}
 
-      {!isLoading && (isError || savedProducts.length === 0) ? (
+      {!isLoading && (isError || sortedSavedProducts.length === 0) ? (
         <div className="px-5 mt-8">
           <div className="bg-background-100 rounded-xl p-8 text-center">
             <div className="w-16 h-16 mx-auto bg-background-200 rounded-full flex items-center justify-center mb-4">
@@ -112,29 +115,29 @@ export default function RecommendMain() {
         </div>
       ) : null}
 
-      {!isLoading && !isError && savedProducts.length > 0 && (
+      {!isLoading && !isError && sortedSavedProducts.length > 0 && (
         <div className="px-5 mt-4 space-y-3">
-          {savedProducts.map((product) => (
+          {sortedSavedProducts.map((product) => (
             <div
               key={product.productId}
-              className="bg-background-50 border border-background-200 rounded-xl p-4"
+              className="relative bg-background-50 border border-background-200 rounded-xl p-4"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
+              <div>
+                <div className="w-full">
                   <span className="inline-block bg-secondary-100 text-secondary-900 text-xs font-semibold px-2 py-0.5 rounded-md mb-2">
                     {product.accountType.displayName}
                   </span>
                   <h3 className="text-base font-bold text-foreground-950">
                     {product.providerName} {product.productName}
                   </h3>
-                  <p className="text-sm text-foreground-500 mt-1">
+                  <p className="mt-1 w-full text-sm text-foreground-500">
                     {product.summary}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleDelete(product.productId)}
-                  className="ml-3 flex h-8 w-8 shrink-0 items-center justify-center text-foreground-400 transition-colors hover:text-accent-500"
+                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center text-foreground-400 transition-colors hover:text-accent-500"
                   aria-label="담은 상품 취소"
                 >
                   <i className="ri-close-line text-lg" />
@@ -158,14 +161,14 @@ export default function RecommendMain() {
                 <button
                   type="button"
                   onClick={() => handleDetail(product.productId)}
-                  className="flex-1 border border-background-300 text-foreground-700 text-sm font-medium py-2 rounded-lg cursor-pointer whitespace-nowrap"
+                  className="flex-1 border border-background-300 text-foreground-700 font-medium py-2 rounded-lg cursor-pointer whitespace-nowrap"
                 >
                   상세보기
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate('/recommend/compare')}
-                  className="flex-1 bg-primary-500 text-background-50 text-sm font-medium py-2 rounded-lg cursor-pointer whitespace-nowrap"
+                  className="flex-1 bg-primary-500 text-background-50 font-medium py-2 rounded-lg cursor-pointer whitespace-nowrap"
                 >
                   비교하기
                 </button>

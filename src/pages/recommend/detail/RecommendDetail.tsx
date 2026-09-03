@@ -12,6 +12,8 @@ export default function RecommendDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const productId = getSelectedProductRecommendationId();
+  const secondaryButtonClassName =
+    'block w-full rounded-lg border border-background-300 py-3 text-center text-sm font-semibold leading-5 text-foreground-700 transition-colors hover:bg-background-100';
   const {
     data: product,
     isLoading,
@@ -259,7 +261,7 @@ export default function RecommendDetail() {
           onClick={handleSaveToggle}
           disabled={isSaving}
           className={`
-            w-full font-semibold py-3.5 rounded-lg cursor-pointer whitespace-nowrap transition-colors
+            w-full rounded-lg py-3.5 text-sm font-semibold leading-5 cursor-pointer whitespace-nowrap transition-colors
             ${saved
               ? 'bg-background-100 text-foreground-700 border border-background-300 hover:bg-background-200'
               : 'bg-primary-500 text-background-50 hover:bg-primary-600'
@@ -274,7 +276,7 @@ export default function RecommendDetail() {
             href={product.officialUrl}
             target="_blank"
             rel="noreferrer"
-            className="mt-3 block w-full rounded-lg border border-background-300 py-3 text-center text-sm font-medium text-foreground-700"
+            className={`mt-3 ${secondaryButtonClassName}`}
           >
             공식 사이트 보기
           </a>
@@ -284,7 +286,7 @@ export default function RecommendDetail() {
           <button
             type="button"
             onClick={() => navigate('/recommend')}
-            className="w-full mt-3 border border-background-300 text-foreground-700 font-medium py-3 rounded-lg cursor-pointer whitespace-nowrap"
+            className={`mt-3 cursor-pointer whitespace-nowrap ${secondaryButtonClassName}`}
           >
             내 상품 리스트로 가기
           </button>
