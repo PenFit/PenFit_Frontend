@@ -10,8 +10,8 @@ import {
 import BottomNav from '../../../components/BottomNav';
 import Button from '../../../components/Button';
 
-function formatWon(amount: number) {
-  return `${amount.toLocaleString('ko-KR')}원`;
+function formatWon(amount?: number | null) {
+  return `${(amount ?? 0).toLocaleString('ko-KR')}원`;
 }
 
 function isStartedStatus(code: string) {
@@ -116,8 +116,15 @@ export default function MissionWeekly() {
     );
   }
 
-  const started = isStartedStatus(mission.status.code);
-  const completed = isCompletedStatus(mission.status.code);
+  const missionStatusCode = mission.status?.code ?? '';
+  const started = isStartedStatus(missionStatusCode);
+  const completed = isCompletedStatus(missionStatusCode);
+  const statusDisplayName = mission.status?.displayName ?? '미션';
+  const topCategoryDisplayName = mission.topCategory?.displayName ?? '주요 지출';
+  const topCategoryRatio = mission.topCategoryRatio ?? 0;
+  const daysLeft = mission.daysLeft ?? 0;
+  const durationDays = mission.durationDays ?? 0;
+  const dueDate = mission.dueDate ?? '';
 
   return (
     <>
@@ -127,14 +134,14 @@ export default function MissionWeekly() {
             이번 주 미션
           </h1>
           <span className="text-xs font-semibold text-background-50 bg-accent-500 px-2.5 py-1 rounded-full">
-            D-{mission.daysLeft}
+            D-{daysLeft}
           </span>
         </div>
 
         <div className="border-2 border-accent-400 rounded-xl p-5 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs font-semibold text-background-50 bg-accent-500 px-2.5 py-1 rounded-full">
-              {mission.status.displayName}
+              {statusDisplayName}
             </span>
           </div>
           <h2 className="text-xl font-bold text-foreground-950 mb-2">
@@ -152,7 +159,7 @@ export default function MissionWeekly() {
               <div className="flex-1">
                 <p className="text-xs text-foreground-500">주요 지출</p>
                 <p className="text-sm font-semibold text-foreground-950">
-                  {mission.topCategory.displayName} {mission.topCategoryRatio}%
+                  {topCategoryDisplayName} {topCategoryRatio}%
                 </p>
               </div>
             </div>
@@ -166,7 +173,7 @@ export default function MissionWeekly() {
                   {formatWon(mission.targetAmount)}
                 </p>
               </div>
-              <p className="text-xs text-foreground-400">{mission.durationDays}일 동안</p>
+              <p className="text-xs text-foreground-400">{durationDays}일 동안</p>
             </div>
             <div className="flex items-center gap-3 bg-background-100 rounded-lg p-3">
               <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
@@ -174,7 +181,7 @@ export default function MissionWeekly() {
               </div>
               <div className="flex-1">
                 <p className="text-xs text-foreground-500">마감일</p>
-                <p className="text-sm font-semibold text-foreground-950">{mission.dueDate}</p>
+                <p className="text-sm font-semibold text-foreground-950">{dueDate}</p>
               </div>
             </div>
           </div>

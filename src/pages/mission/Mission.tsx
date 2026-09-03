@@ -59,8 +59,8 @@ export default function Mission() {
     const fetchMyInformation = async () => {
       try {
         const myInformation = await getMyInformation();
-        setEmail(myInformation.email);
-        setAgreed(myInformation.emailConsent);
+        setEmail(typeof myInformation.email === 'string' ? myInformation.email : '');
+        setAgreed(myInformation.emailConsent === true);
       } catch (error) {
         console.error('이메일 정보 조회에 실패했어요.', error);
       }
@@ -88,7 +88,7 @@ export default function Mission() {
       const updatedUser = await updateEmailConsent(true);
       await createSpendingAnalysis();
 
-      setEmail(updatedUser.email);
+      setEmail(updatedUser.email ?? '');
       setAgreed(true);
       queryClient.invalidateQueries({ queryKey: ['currentBehaviorMission'] });
       queryClient.invalidateQueries({ queryKey: ['spendingAnalysis'] });

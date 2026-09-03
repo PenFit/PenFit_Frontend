@@ -91,7 +91,7 @@ export default function MyPage() {
     try {
       const updatedUser = await updateMyEmail(nextEmail);
       setUserInfo(updatedUser);
-      setEmailInput(updatedUser.email);
+      setEmailInput(updatedUser.email ?? '');
       setEmailErrorMessage('');
       setIsEditingEmail(false);
     } catch (error) {
