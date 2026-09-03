@@ -17,7 +17,7 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // 일반 API 요청에 사용하는 공통 axios 인스턴스
 const apiClient = axios.create({
@@ -25,9 +25,15 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
+// 인증 API는 같은 출처 프록시를 사용해 refreshToken 쿠키를 퍼스트파티로 유지
+export const authClient = axios.create({
+  baseURL: "",
+  withCredentials: true,
+});
+
 // accessToken 재발급 전용 인스턴스. 인터셉터 순환 호출을 막기 위해 분리
 const reissueClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: "",
   withCredentials: true,
 });
 

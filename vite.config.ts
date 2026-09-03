@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      "/api": {
+      "/api/v1/auth": {
         target: "https://penfit.duckdns.org",
         changeOrigin: true,
         secure: true,

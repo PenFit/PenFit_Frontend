@@ -62,6 +62,8 @@ interface MyPensionPlanResponse {
 export async function createPensionPlan() {
   const response = await apiClient.post<PensionPlanResponse>(
     "/api/v1/users/me/pension-plan",
+    undefined,
+    { timeout: 90000 },
   );
 
   return response.data.data;
