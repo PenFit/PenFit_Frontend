@@ -52,8 +52,6 @@ export default function Loading() {
       return undefined;
     }
 
-    setMessage('당신의 연금 성향을 분석하고 있어요');
-
     const navigateToError = (state?: LoadingErrorState) => {
       navigate('/status/error', {
         replace: true,

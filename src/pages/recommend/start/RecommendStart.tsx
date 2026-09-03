@@ -16,16 +16,14 @@ import {
 
 export default function RecommendStart() {
   const navigate = useNavigate();
-  const [recommendations, setRecommendations] = useState<ProductRecommendation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [recommendations, setRecommendations] = useState<ProductRecommendation[]>(() =>
+    getStoredProductRecommendations(),
+  );
+  const [isLoading, setIsLoading] = useState(() => recommendations.length === 0);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    const storedRecommendations = getStoredProductRecommendations();
-
-    if (storedRecommendations.length > 0) {
-      setRecommendations(storedRecommendations);
-      setIsLoading(false);
+    if (recommendations.length > 0) {
       return;
     }
 
@@ -70,7 +68,7 @@ export default function RecommendStart() {
     };
 
     fetchRecommendations();
-  }, []);
+  }, [recommendations.length]);
 
   const products = recommendations
     .slice()

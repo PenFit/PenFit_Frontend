@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { deleteSavedProduct, getPensionProductDetail, saveProduct } from '../../../apis/recommend';
 import BottomNav from '../../../components/BottomNav';
 import {
@@ -24,14 +24,16 @@ export default function RecommendDetail() {
     queryFn: () => getPensionProductDetail(productId as number),
     enabled: productId !== null,
   });
-  const [saved, setSaved] = useState(false);
+  const [savedOverride, setSavedOverride] = useState<{
+    productId: number | null;
+    saved: boolean;
+  } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveErrorMessage, setSaveErrorMessage] = useState('');
-
-  useEffect(() => {
-    setSaved(product?.saved ?? false);
-    setSaveErrorMessage('');
-  }, [product?.saved]);
+  const saved =
+    savedOverride?.productId === productId
+      ? savedOverride.saved
+      : product?.saved ?? false;
 
   const updateSavedCache = (nextSaved: boolean) => {
     queryClient.setQueryData(['pensionProductDetail', productId], {
@@ -53,21 +55,21 @@ export default function RecommendDetail() {
       if (saved) {
         await deleteSavedProduct(product.productId);
 
-        setSaved(false);
+        setSavedOverride({ productId, saved: false });
         updateSavedCache(false);
         return;
       }
 
       await saveProduct(product.productId);
 
-      setSaved(true);
+      setSavedOverride({ productId, saved: true });
       updateSavedCache(true);
     } catch (error) {
       if (isAxiosError(error)) {
         console.error(saved ? '담은 상품 취소 실패 응답' : '상품 담기 실패 응답', error.response?.data);
 
         if (error.response?.data?.code === 'PR4091') {
-          setSaved(true);
+          setSavedOverride({ productId, saved: true });
           updateSavedCache(true);
           return;
         }

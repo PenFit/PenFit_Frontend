@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -25,15 +25,21 @@ export default function Simulation() {
     (answer) => answer.scenarioCode === simulation?.scenarioCode,
   );
 
-  const [selected, setSelected] = useState<string>('');
+  const [selectedOverride, setSelectedOverride] = useState<{
+    stepNum: number;
+    value: string;
+  } | null>(null);
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [stepError, setStepError] = useState<{
+    stepNum: number;
+    message: string;
+  } | null>(null);
   const isSavingAnswerRef = useRef(false);
-
-  useEffect(() => {
-    setSelected(savedAnswer?.optionCode ?? '');
-    setErrorMessage('');
-  }, [savedAnswer?.optionCode, stepNum]);
+  const selected =
+    selectedOverride?.stepNum === stepNum
+      ? selectedOverride.value
+      : savedAnswer?.optionCode ?? '';
+  const errorMessage = stepError?.stepNum === stepNum ? stepError.message : '';
 
   if (!rehearsalId) {
     return <Navigate to="/result-preview" replace />;
@@ -74,11 +80,14 @@ export default function Simulation() {
     const isValidOption = simulation.options.some((option) => option.value === selected);
 
     if (!isValidOption) {
-      setErrorMessage('선택할 수 없는 답변이에요. 다시 선택해주세요.');
+      setStepError({
+        stepNum,
+        message: '선택할 수 없는 답변이에요. 다시 선택해주세요.',
+      });
       return;
     }
 
-    setErrorMessage('');
+    setStepError(null);
 
     if (savedAnswer?.optionCode === selected) {
       if (!isLast) {
@@ -98,7 +107,10 @@ export default function Simulation() {
           console.error('리허설 완료 제출 실패 응답', error.response?.data);
         }
         console.error('리허설 완료 제출에 실패했어요.', error);
-        setErrorMessage('리허설 제출에 실패했어요. 다시 시도해주세요.');
+        setStepError({
+          stepNum,
+          message: '리허설 제출에 실패했어요. 다시 시도해주세요.',
+        });
       } finally {
         isSavingAnswerRef.current = false;
         setIsSavingAnswer(false);
@@ -131,7 +143,10 @@ export default function Simulation() {
         console.error('리허설 답변 처리 실패 응답', error.response?.data);
       }
       console.error('리허설 답변 처리에 실패했어요.', error);
-      setErrorMessage('답변을 저장하지 못했어요. 다시 시도해주세요.');
+      setStepError({
+        stepNum,
+        message: '답변을 저장하지 못했어요. 다시 시도해주세요.',
+      });
     } finally {
       isSavingAnswerRef.current = false;
       setIsSavingAnswer(false);
@@ -189,9 +204,9 @@ export default function Simulation() {
                 subtitle={opt.subtitle}
                 selected={selected === opt.value}
                 onClick={() => {
-                  setSelected(opt.value);
+                  setSelectedOverride({ stepNum, value: opt.value });
                   if (errorMessage) {
-                    setErrorMessage('');
+                    setStepError(null);
                   }
                 }}
               />

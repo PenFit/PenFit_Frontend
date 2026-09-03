@@ -14,7 +14,6 @@ export default function ProtectedRoute() {
 
   useEffect(() => {
     if (getAccessToken()) {
-      setStatus("authenticated");
       return;
     }
 
