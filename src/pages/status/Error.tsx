@@ -1,16 +1,26 @@
 import { useState } from 'react';
 import { isAxiosError } from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { retryRehearsalAnalysis } from '../../apis/simulation';
 import StatusScreen from '../../components/StatusScreen';
 import { getStoredRehearsalId } from '../../utils/rehearsalStorage';
 
 const DEFAULT_DESCRIPTION = '네트워크 문제일 수 있어요. 다시 시도해주세요.';
 
+interface ErrorLocationState {
+  code?: string;
+  message?: string;
+}
+
 export default function StatusError() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const errorState = location.state as ErrorLocationState | null;
+  const initialDescription = errorState?.message
+    ? `${errorState.message}${errorState.code ? ` (${errorState.code})` : ''}`
+    : DEFAULT_DESCRIPTION;
   const [isRetrying, setIsRetrying] = useState(false);
-  const [description, setDescription] = useState(DEFAULT_DESCRIPTION);
+  const [description, setDescription] = useState(initialDescription);
 
   const handleRetry = async () => {
     const rehearsalId = getStoredRehearsalId();

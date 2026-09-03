@@ -17,32 +17,34 @@ const initialItems: CheckItem[] = [
   { label: '유지 가능한 연금계획 생성 중', status: 'pending' },
 ];
 
-const FAILED_STATUS_CODES = new Set([
-  'FAILED',
-  'FAIL',
-  'ERROR',
-  'ANALYSIS_FAILED',
-]);
+const REHEARSAL_STATUS = {
+  ANALYZING: 'ANALYZING',
+  FAILED: 'FAILED',
+  COMPLETED: 'COMPLETED',
+} as const;
 
 const MAX_POLL_COUNT = 40;
 const POLL_INTERVAL_MS = 3000;
+const MAX_FAILED_AFTER_RETRY_COUNT = 5;
 
-type LoadingErrorType = 'delayed' | 'failed' | null;
+interface LoadingErrorState {
+  code?: string;
+  message?: string;
+}
 
 export default function Loading() {
   const navigate = useNavigate();
   const hasRequestedPlanRef = useRef(false);
+  const hasRetriedAnalysisRef = useRef(false);
 
   const [items, setItems] = useState<CheckItem[]>(initialItems);
   const [message, setMessage] = useState('당신의 연금 성향을 분석하고 있어요');
-  const [errorType, setErrorType] = useState<LoadingErrorType>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
-  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     const rehearsalId = getStoredRehearsalId();
     let isMounted = true;
     let pollCount = 0;
+    let failedAfterRetryCount = 0;
     let pollTimer: number | undefined;
 
     if (!rehearsalId) {
@@ -50,8 +52,14 @@ export default function Loading() {
       return undefined;
     }
 
-    setErrorType(null);
     setMessage('당신의 연금 성향을 분석하고 있어요');
+
+    const navigateToError = (state?: LoadingErrorState) => {
+      navigate('/status/error', {
+        replace: true,
+        state,
+      });
+    };
 
     const pollAnalysis = async () => {
       if (!isMounted) {
@@ -67,17 +75,74 @@ export default function Loading() {
           return;
         }
 
-        if (FAILED_STATUS_CODES.has(progress.status.code)) {
-          setErrorType('failed');
-          setMessage(progress.failureMessage || '분석에 실패했어요. 다시 시도해주세요.');
+        if (progress.status.code === REHEARSAL_STATUS.FAILED) {
+          console.error('리허설 AI 분석 실패 상태', progress);
+
+          if (!hasRetriedAnalysisRef.current) {
+            hasRetriedAnalysisRef.current = true;
+
+            try {
+              await retryRehearsalAnalysis(rehearsalId);
+            } catch (error) {
+              const errorData = isAxiosError(error) ? error.response?.data : undefined;
+              console.error('리허설 AI 분석 재시도 실패 응답', errorData);
+              navigateToError({
+                code: errorData?.code ?? progress.failureCode,
+                message: errorData?.message ?? progress.failureMessage,
+              });
+              return;
+            }
+
+            if (!isMounted) {
+              return;
+            }
+
+            pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
+            return;
+          }
+
+          failedAfterRetryCount += 1;
+
+          if (failedAfterRetryCount < MAX_FAILED_AFTER_RETRY_COUNT) {
+            pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
+            return;
+          }
+
+          navigateToError({
+            code: progress.failureCode || progress.status.code,
+            message: progress.failureMessage || `${progress.status.displayName} 상태가 계속 반환되고 있어요. 재시도 횟수: ${progress.retryCount}`,
+          });
           return;
         }
+
+        failedAfterRetryCount = 0;
 
         setItems([
           { label: '납입 행동 분석 중', status: 'done' },
           { label: '시장 대응 성향 분석 중', status: 'loading' },
           { label: '유지 가능한 연금계획 생성 중', status: 'pending' },
         ]);
+
+        if (progress.status.code === REHEARSAL_STATUS.ANALYZING) {
+          if (pollCount < MAX_POLL_COUNT) {
+            pollTimer = window.setTimeout(pollAnalysis, POLL_INTERVAL_MS);
+            return;
+          }
+
+          navigateToError({
+            code: 'TIMEOUT',
+            message: '분석이 예상보다 오래 걸리고 있어요.',
+          });
+          return;
+        }
+
+        if (progress.status.code !== REHEARSAL_STATUS.COMPLETED) {
+          navigateToError({
+            code: progress.status.code,
+            message: progress.status.displayName,
+          });
+          return;
+        }
 
         try {
           const passport = await getMyPensionPassport();
@@ -132,8 +197,10 @@ export default function Loading() {
               return;
             }
 
-            setErrorType('delayed');
-            setMessage('분석이 예상보다 오래 걸리고 있어요.');
+            navigateToError({
+              code: 'PP4041',
+              message: '연금 패스포트 생성이 아직 완료되지 않았어요.',
+            });
             return;
           }
 
@@ -147,8 +214,10 @@ export default function Loading() {
           }
 
           console.error('패스포트 조회 또는 연금 계획 생성에 실패했어요.', error);
-          setErrorType('failed');
-          setMessage('분석 결과를 불러오지 못했어요. 다시 시도해주세요.');
+          navigateToError({
+            code: isAxiosError(error) ? error.response?.data?.code : undefined,
+            message: isAxiosError(error) ? error.response?.data?.message : undefined,
+          });
           return;
         }
       } catch (error) {
@@ -160,12 +229,14 @@ export default function Loading() {
           console.error('리허설 분석 상태 조회 실패 응답', error.response?.data);
         }
         console.error('리허설 분석 상태 조회에 실패했어요.', error);
-        setErrorType('failed');
-        setMessage('분석 상태를 확인하지 못했어요. 다시 시도해주세요.');
+        navigateToError({
+          code: isAxiosError(error) ? error.response?.data?.code : undefined,
+          message: isAxiosError(error) ? error.response?.data?.message : undefined,
+        });
       }
     };
 
-    pollAnalysis();
+    pollTimer = window.setTimeout(pollAnalysis, 0);
 
     return () => {
       isMounted = false;
@@ -174,38 +245,7 @@ export default function Loading() {
         window.clearTimeout(pollTimer);
       }
     };
-  }, [navigate, retryKey]);
-
-  const handleRetry = async () => {
-    const rehearsalId = getStoredRehearsalId();
-
-    if (!rehearsalId || isRetrying) {
-      navigate('/result-preview', { replace: true });
-      return;
-    }
-
-    setIsRetrying(true);
-
-    try {
-      if (errorType === 'failed') {
-        await retryRehearsalAnalysis(rehearsalId);
-      }
-
-      hasRequestedPlanRef.current = false;
-      setItems(initialItems);
-      setErrorType(null);
-      setRetryKey((currentKey) => currentKey + 1);
-    } catch (error) {
-      if (isAxiosError(error)) {
-        console.error('리허설 AI 분석 재시도 실패 응답', error.response?.data);
-      }
-      console.error('리허설 AI 분석 재시도에 실패했어요.', error);
-      setErrorType('failed');
-      setMessage('다시 시도하지 못했어요. 잠시 후 다시 시도해주세요.');
-    } finally {
-      setIsRetrying(false);
-    }
-  };
+  }, [navigate]);
 
   return (
     <>
@@ -224,15 +264,11 @@ export default function Loading() {
 
           {/* 스피너 */}
           <div className="relative w-24 h-24 mb-12">
-            {!errorType && (
-              <>
-                <div className="absolute inset-0 spinner-arc-1" />
-                <div className="absolute inset-0 spinner-arc-2" />
-              </>
-            )}
+            <div className="absolute inset-0 spinner-arc-1" />
+            <div className="absolute inset-0 spinner-arc-2" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center">
-                <i className={`${errorType ? 'ri-error-warning-line text-accent-500' : 'ri-shield-check-line text-primary-500'} text-xl w-6 h-6 flex items-center justify-center`} />
+                <i className="ri-shield-check-line text-primary-500 text-xl w-6 h-6 flex items-center justify-center" />
               </div>
             </div>
           </div>
@@ -267,32 +303,12 @@ export default function Loading() {
             ))}
           </div>
 
-          {errorType ? (
-            <div className="w-full space-y-3">
-              <button
-                type="button"
-                onClick={handleRetry}
-                disabled={isRetrying}
-                className="w-full bg-primary-500 hover:bg-primary-600 text-background-50 font-semibold py-4 rounded-lg transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isRetrying ? '다시 시도 중' : '다시 시도하기'}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/result-preview', { replace: true })}
-                className="w-full bg-background-100 text-foreground-700 font-semibold py-4 rounded-lg transition-colors hover:bg-background-200 whitespace-nowrap"
-              >
-                이전 화면으로 돌아가기
-              </button>
-            </div>
-          ) : (
-            /* 푸터 힌트 */
-            <p className="text-xs text-foreground-400 text-center leading-relaxed animate-fade-in">
-              분석이 끝날 때까지 잠시만 기다려주세요.
-              <br />
-              완료되면 자동으로 리포트 페이지로 넘어갑니다.
-            </p>
-          )}
+          {/* 푸터 힌트 */}
+          <p className="text-xs text-foreground-400 text-center leading-relaxed animate-fade-in">
+            분석이 끝날 때까지 잠시만 기다려주세요.
+            <br />
+            완료되면 자동으로 리포트 페이지로 넘어갑니다.
+          </p>
         </div>
     </>
   );

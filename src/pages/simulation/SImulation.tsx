@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -28,6 +28,7 @@ export default function Simulation() {
   const [selected, setSelected] = useState<string>('');
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const isSavingAnswerRef = useRef(false);
 
   useEffect(() => {
     setSelected(savedAnswer?.optionCode ?? '');
@@ -64,7 +65,7 @@ export default function Simulation() {
   const nextPath = isLast ? '/loading' : `/simulation/${stepNum + 1}`;
 
   const handleNext = async () => {
-    if (!selected || !simulation.scenarioCode || isSavingAnswer) {
+    if (!selected || !simulation.scenarioCode || isSavingAnswer || isSavingAnswerRef.current) {
       return;
     }
 
@@ -83,6 +84,7 @@ export default function Simulation() {
         return;
       }
 
+      isSavingAnswerRef.current = true;
       setIsSavingAnswer(true);
 
       try {
@@ -96,12 +98,14 @@ export default function Simulation() {
         console.error('리허설 완료 제출에 실패했어요.', error);
         setErrorMessage('리허설 제출에 실패했어요. 다시 시도해주세요.');
       } finally {
+        isSavingAnswerRef.current = false;
         setIsSavingAnswer(false);
       }
 
       return;
     }
 
+    isSavingAnswerRef.current = true;
     setIsSavingAnswer(true);
 
     try {
@@ -127,6 +131,7 @@ export default function Simulation() {
       console.error('리허설 답변 처리에 실패했어요.', error);
       setErrorMessage('답변을 저장하지 못했어요. 다시 시도해주세요.');
     } finally {
+      isSavingAnswerRef.current = false;
       setIsSavingAnswer(false);
     }
   };
