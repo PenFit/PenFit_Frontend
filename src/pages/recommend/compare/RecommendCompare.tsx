@@ -13,7 +13,7 @@ import { getStoredProductRecommendations } from '../recommendationStorage';
 
 const compareCriteria = [
   { key: 'fee', label: '수수료' },
-  { key: 'investmentScope', label: '투자상품 선택 범위' },
+  { key: 'investmentScope', label: '투자상품\n선택 범위' },
   { key: 'fitLevel', label: '적합도' },
 ];
 
@@ -251,7 +251,7 @@ export default function RecommendCompare() {
                 key={criteria.key}
                 className="grid grid-cols-[88px_repeat(3,minmax(144px,1fr))] border-b border-background-200 last:border-b-0"
               >
-                <div className="flex items-center bg-background-100 p-3 text-xs font-semibold text-foreground-600">
+                <div className="flex items-center whitespace-pre-line bg-background-100 p-3 text-xs font-semibold text-foreground-600">
                   {criteria.label}
                 </div>
                 {products.map((product) => {
@@ -280,7 +280,9 @@ export default function RecommendCompare() {
       {/* 경고 */}
       <div className="px-5 mt-4">
         <p className="text-xs text-foreground-400 leading-relaxed bg-background-100 rounded-lg p-3">
-          세부 조건과 가입 가능 여부는 상품 가입 전 금융회사 공식 채널에서 확인하세요.
+          세부 조건과 가입 가능 여부는 상품 가입 전 금융회사 공식
+          <br />
+          채널에서 확인하세요.
         </p>
       </div>
 
