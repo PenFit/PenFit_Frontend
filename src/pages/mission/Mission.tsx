@@ -28,6 +28,7 @@ export default function Mission() {
   const [email, setEmail] = useState('');
   const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
   const [showEmailRequiredAlert, setShowEmailRequiredAlert] = useState(false);
+  const [showAnalysisNotice, setShowAnalysisNotice] = useState(false);
   const [emailErrorMessage, setEmailErrorMessage] = useState('');
   const trimmedEmail = email.trim();
   const emailFormatErrorMessage =
@@ -80,9 +81,11 @@ export default function Mission() {
 
     if (!isValidEmail(nextEmail)) {
       setEmailErrorMessage('올바른 이메일 주소를 입력해주세요.');
+      setShowAnalysisNotice(false);
       return;
     }
 
+    setShowAnalysisNotice(false);
     setIsSubmittingConsent(true);
 
     try {
@@ -120,6 +123,22 @@ export default function Mission() {
 
     setEmailErrorMessage('');
     setEmailConsentChecked(!emailConsentChecked);
+  };
+
+  const handleOpenAnalysisNotice = () => {
+    const nextEmail = email.trim();
+
+    if (!emailConsentChecked || !nextEmail || isSubmittingConsent) {
+      return;
+    }
+
+    if (!isValidEmail(nextEmail)) {
+      setEmailErrorMessage('올바른 이메일 주소를 입력해주세요.');
+      return;
+    }
+
+    setEmailErrorMessage('');
+    setShowAnalysisNotice(true);
   };
 
   if (!agreed) {
@@ -197,17 +216,11 @@ export default function Mission() {
               </p>
             </div>
 
-            <div className="mb-6 rounded-xl bg-primary-50 px-4 py-3">
-              <p className="text-xs leading-relaxed text-primary-700">
-                실제 결제 내역이 아닌 가상 소비 내역을 바탕으로 분석해요.
-              </p>
-            </div>
-
             {/* 제출 버튼 */}
 	            <button
 	              type="button"
 	              disabled={!canSubmitConsent}
-	              onClick={handleReceiveMissionAnalysis}
+	              onClick={handleOpenAnalysisNotice}
 	              className={`
 	                w-full py-3.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer
                 ${canSubmitConsent
@@ -234,6 +247,42 @@ export default function Mission() {
                 <Button className="py-3" onClick={() => setShowEmailRequiredAlert(false)}>
                   확인
                 </Button>
+              </section>
+            </div>
+          )}
+
+          {showAnalysisNotice && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 px-6 animate-fade-in">
+              <section className="w-full max-w-sm rounded-xl bg-background-50 p-6 text-center shadow-lg">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary-50">
+                  <i className="ri-sparkling-line flex h-7 w-7 items-center justify-center text-2xl text-primary-500" />
+                </div>
+                <h2 className="mb-2 font-heading text-lg font-bold text-foreground-950">
+                  미션 분석을 받을까요?
+                </h2>
+                <p className="mb-6 text-sm leading-relaxed text-foreground-600">
+                  실제 결제 내역이 아닌
+                  <br />
+                  가상 소비 내역을 바탕으로 분석해요.
+                </p>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={handleReceiveMissionAnalysis}
+                    disabled={isSubmittingConsent}
+                    className="w-full rounded-lg bg-primary-500 py-3.5 text-sm font-semibold text-background-50 transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSubmittingConsent ? '처리 중' : '분석받기'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAnalysisNotice(false)}
+                    disabled={isSubmittingConsent}
+                    className="w-full rounded-lg bg-background-100 py-3.5 text-sm font-semibold text-foreground-700 transition-colors hover:bg-background-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    돌아가기
+                  </button>
+                </div>
               </section>
             </div>
           )}
