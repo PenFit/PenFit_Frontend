@@ -11,7 +11,7 @@ export default function AppFrame({ children }: AppFrameProps) {
       <div className="hidden min-h-dvh items-center justify-center px-6 md:flex lg:px-12">
 
         {/* 중앙 앱 사이즈 */}
-        <div className="relative flex h-[min(calc(100dvh-3rem),812px)] w-[375px] flex-col overflow-hidden rounded-3xl border border-background-200 bg-background-50 shadow-xl">
+        <div className="relative flex h-[min(calc(100dvh-3rem),812px)] w-93.75 flex-col overflow-hidden rounded-3xl border border-background-200 bg-background-50 shadow-xl">
           {children}
         </div>
 
