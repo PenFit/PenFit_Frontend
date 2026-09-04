@@ -265,7 +265,7 @@ export default function RecommendDetail() {
       {/* 면책 조항 */}
       <div className="px-5 mt-4">
         <p className="text-xs text-foreground-400 leading-relaxed bg-background-100 rounded-lg p-3">
-          이 정보는 참고용이며, 정확한 내용은 금융회사 공식 채널에서 확인하세요.
+          이 정보는 단순 참고용입니다. 정확한 내용은 금융회사 공식 채널에서 확인하세요.
         </p>
       </div>
 

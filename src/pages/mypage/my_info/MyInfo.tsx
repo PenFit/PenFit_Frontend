@@ -174,7 +174,8 @@ export default function MyInfo() {
             <div className="flex items-start gap-3 bg-accent-50 rounded-2xl p-4">
               <i className="ri-information-line text-accent-600 text-lg w-5 h-5 flex items-center justify-center mt-0.5 shrink-0" />
               <p className="text-xs text-accent-800 leading-relaxed">
-                내 정보는 가상 체험에만 사용되며, 실제 금융상품 가입과 무관해요. 정보를 수정하려면 시뮬레이션을 다시 진행해주세요.
+                내 정보는 가상 체험에만 사용되고 실제 금융상품
+                <br />가입과 무관해요.
               </p>
             </div>
           )}

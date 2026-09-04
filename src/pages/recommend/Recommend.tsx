@@ -59,7 +59,9 @@ export default function RecommendMain() {
             내가 담은 상품 리스트
           </h1>
           <p className="text-sm text-foreground-500 mt-1">
-            관심 있는 연금 상품을 모아서 비교하고 상세 정보를 확인하세요
+            관심 있는 연금 상품을 모아서 비교하고 상세 정보를 
+            <br />
+            확인하세요
           </p>
         </div>
         {sortedSavedProducts.length > 0 && (
