@@ -197,6 +197,12 @@ export default function Mission() {
               </p>
             </div>
 
+            <div className="mb-6 rounded-xl bg-primary-50 px-4 py-3">
+              <p className="text-xs leading-relaxed text-primary-700">
+                실제 결제 내역이 아닌 가상 소비 내역을 바탕으로 분석해요.
+              </p>
+            </div>
+
             {/* 제출 버튼 */}
 	            <button
 	              type="button"
