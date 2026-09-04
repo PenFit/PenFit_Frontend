@@ -203,7 +203,7 @@ export default function Home() {
 
             <div className="mb-4 grid grid-cols-2 gap-3">
               <div className="rounded-lg bg-background-50 p-3">
-                <p className="mb-1 text-xs text-foreground-500">월 납입액</p>
+                <p className="mb-1 text-xs text-foreground-500">월 납입 유지 가능액</p>
                 <p className="text-base font-bold text-foreground-950">
                   {home.pensionPlan ? formatWon(home.pensionPlan.monthlyContribution) : '-'}
                 </p>
