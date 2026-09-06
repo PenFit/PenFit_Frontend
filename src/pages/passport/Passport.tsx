@@ -126,7 +126,7 @@ export default function Passport() {
           {/* 각 탭마다의 내용 */}
           {activeTab === 'personality' && (
             <div className="animate-fade-in">
-              <div className="px-6 pb-4 grid grid-cols-1 gap-3">
+              <div className="px-6 pt-4 pb-4 grid grid-cols-1 gap-3">
                 <div className="bg-background-100 rounded-xl p-4">
                   <p className="text-xs text-foreground-500 mb-1">월 납입 유지 가능액</p>
                   {hasNoSustainableContribution ? (
@@ -165,7 +165,7 @@ export default function Passport() {
               </div>
 
               {/* AI 분석 요약 */}
-              <div className="px-6 pb-6">
+              <div className="px-6">
                 <h3 className="text-base font-bold text-foreground-950 mb-3">
                   AI 분석 요약
                 </h3>
@@ -186,7 +186,7 @@ export default function Passport() {
           )}
 
           {activeTab === 'detail' && (
-            <div className="px-6 pb-6 animate-fade-in space-y-4">
+            <div className="px-6 pt-4 animate-fade-in space-y-4">
               <div className="rounded-xl bg-background-100 p-4">
                 <p className="mb-2 text-sm font-bold text-foreground-950">판단 이유</p>
                 <p className="text-sm leading-relaxed text-foreground-700">
