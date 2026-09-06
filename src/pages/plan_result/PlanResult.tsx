@@ -89,6 +89,12 @@ export default function PlanResult() {
     <>
       <div className="flex-1 overflow-y-auto pb-24">
         <section className="px-6 pb-5 pt-6">
+          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-center text-sm font-medium text-amber-800">
+              자세한 내용은 패스포트에서 확인 가능합니다
+            </p>
+          </div>
+
           <div className="rounded-2xl border border-primary-100 bg-primary-50 p-5 shadow-sm">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
@@ -116,7 +122,7 @@ export default function PlanResult() {
             <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-primary-500 text-background-50">
               <i className="ri-wallet-3-line flex h-5 w-5 items-center justify-center text-lg" />
             </div>
-            <p className="mb-1 text-xs font-medium text-primary-700">월 납입액</p>
+            <p className="mb-1 text-xs font-medium text-primary-700">월 납입 유지 가능액</p>
             <p className="text-xl font-bold text-foreground-950">
               {formatWon(plan.monthlyContribution)}
             </p>
@@ -150,7 +156,7 @@ export default function PlanResult() {
         {/* 자산 비율 */}
         <div className="px-6 pb-4">
           <h3 className="text-base font-bold text-foreground-950 mb-3">
-            자산 구성
+            추천 자산 구성
           </h3>
           <div className="rounded-2xl bg-background-100 p-4">
             <div className="flex gap-1 mb-4">
